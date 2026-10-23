@@ -28,6 +28,8 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 #app.overview th,#app.overview td{padding:4px 6px;line-height:1.25}
 #app.overview .tw{border-radius:7px}
 #app.overview .cols>.card{min-width:0}
+#app.overview .overview-line-card{width:70%}
+@media(max-width:700px){#app.overview .overview-line-card{width:100%}}
 </style></head><body>
 <header class="topbar"><div class="topbar-in"><div class="brand-mark">HR · ILS</div><div class="head-copy"><h1>Báo cáo nhân sự – Bộ phận sản xuất</h1><div class="sub" id="sub"></div></div><div class="account"><span id="me"></span> · <a href="#" onclick="HRCloud.logout(event)">Đăng xuất</a></div></div></header>
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
@@ -90,7 +92,7 @@ function vOverview(){const all=emps(),a=all.filter(e=>st.sh.includes(e[3]));cons
  const mx={};a.forEach(e=>{const k=(e[4]||'(trống)')+'|'+e[3];mx[k]=(mx[k]||0)+1});
  const types=[...new Set(a.map(e=>e[4]||'(trống)'))];
  return chk+ovCtl()+shiftKpi(a)+`<div class="cols"><div class="card"><h3>Ca làm việc × loại nhân lực</h3>${tbl(['Loại','Ca A','Ca C','HC','Tổng'],types.map(x=>[x,mx[x+'|A']||0,mx[x+'|C']||0,mx[x+'|HC']||0,t[x]||0]))}${ovAtt(a)}</div>
- <div class="card"><h3>Nhà thời vụ (vendor) hiện tại – ${tv.length} người</h3>${hstack(ovData(e=>e[5],e=>e[4]==='Thời vụ'))}</div></div><div class="card" style="margin-top:12px"><h3>Nhân lực theo line (bấm vào cột để xem danh sách)</h3>${vstack(ovData(e=>e[6]))}</div>
+ <div class="card"><h3>Nhà thời vụ (vendor) hiện tại – ${tv.length} người</h3>${hstack(ovData(e=>e[5],e=>e[4]==='Thời vụ'))}</div></div><div class="card overview-line-card" style="margin-top:12px"><h3>Nhân lực theo line (bấm vào cột để xem danh sách)</h3>${vstack(ovData(e=>e[6]))}</div>
  ${vNew()}<p class="note">Dữ liệu gốc: ${D.E.length} nhân viên từ file DS tổng, đã cộng/trừ các thay đổi thực hiện trên trang này.</p>`}
 function goLine(k){st.line=k;tab=1;render()}
 function vLine(){const a=emps(),ls=Object.keys(cnt(a,e=>e[6])).sort();if(!st.line)st.line=ls[0];
