@@ -15,7 +15,8 @@ Project ref: `rhcnogepfjvcikhvfubx`
 
 1. Trong Authentication settings, tắt đăng ký công khai.
 2. Mở SQL Editor và chạy `supabase/migrations/001_hr_schema.sql`. Migration tạo các bảng HR trống, bật RLS và không cấp quyền truy cập bảng trực tiếp cho `anon`/`authenticated`.
-3. Cài Supabase CLI rồi triển khai Edge Function:
+3. Chạy thêm migration `supabase/migrations/002_employee_edit.sql` trong SQL Editor để bật sửa nhân viên có nhật ký.
+4. Cài Supabase CLI rồi triển khai Edge Function:
 
    ```powershell
    npx supabase login
@@ -24,7 +25,7 @@ Project ref: `rhcnogepfjvcikhvfubx`
 
    Function dùng `SUPABASE_SERVICE_ROLE_KEY` ở môi trường máy chủ; khóa này không nằm trong website.
 
-4. Tạo tài khoản đầu tiên trong **Authentication → Users → Add user** bằng email `admin@hr.internal`, mật khẩu mạnh và xác nhận email. Sau đó chạy một lần trong SQL Editor:
+5. Tạo tài khoản đầu tiên trong **Authentication → Users → Add user** bằng email `admin@hr.internal`, mật khẩu mạnh và xác nhận email. Sau đó chạy một lần trong SQL Editor:
 
    ```sql
    insert into public.hr_users(id, username, name, role)
