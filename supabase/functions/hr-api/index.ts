@@ -1,9 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const admin = createClient(URL, SERVICE, { auth: { persistSession: false } });
+const admin = createClient(SUPABASE_URL, SERVICE, { auth: { persistSession: false } });
 const allowed = new Set([
   "https://sonkk89-cmd.github.io",
   "http://localhost:3000",
@@ -125,7 +125,7 @@ Deno.serve(async req => {
     if (method === "POST" && route === "/api/login") {
       const body = await req.json(), username = String(body.username || "").trim();
       if (!username || !body.password) return fail("Nhập tài khoản và mật khẩu", 400, origin);
-      const client = createClient(URL, ANON, { auth: { persistSession: false } });
+      const client = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
       const loginEmail = username.includes("@") ? username.toLowerCase() : usernameEmail(username);
       const { data, error } = await client.auth.signInWithPassword({ email: loginEmail, password: String(body.password) });
       if (error || !data.session) return fail("Sai tài khoản hoặc mật khẩu", 401, origin);
