@@ -248,7 +248,7 @@ function updatePasteStatus(){
 function renderPasteSheet(){
  const tabs=Object.entries(PASTE_SHEETS).map(([k,v])=>'<button class="b '+(k===pasteSheet?'':'g')+'" onclick="switchPasteSheet(\''+k+'\')">'+v.label+'</button>').join('');
  $('pasteTabs').innerHTML=tabs;
- const heads=PASTE_SHEETS[pasteSheet].heads,cols=buildPasteRows().cols;
+ const heads=PASTE_SHEETS[pasteSheet].heads,cols=heads.map((_,i)=>(pasteCols[pasteSheet]||[])[i]||[]);
  const th=heads.map((h,i)=>'<th style="position:static;min-width:'+(h==='Họ tên'?175:130)+'px">'+esc(h)+'</th>').join('');
  const cells=heads.map((h,i)=>'<td style="padding:4px;vertical-align:top"><textarea id="pasteCol'+i+'" rows="8" oninput="updatePasteStatus()" placeholder="Dán cột '+esc(h)+'..." style="width:100%;min-width:'+(h==='Họ tên'?165:120)+'px;height:190px;padding:8px;border:1px solid var(--bd);border-radius:6px;font:12px/1.5 monospace;resize:vertical">'+esc((cols[i]||[]).join('\n'))+'</textarea></td>').join('');
  $('pasteSheetBody').innerHTML='<div class="tw" style="max-height:280px;overflow:auto"><table style="min-width:'+(heads.length*130)+'px;table-layout:fixed"><thead><tr>'+th+'</tr></thead><tbody><tr>'+cells+'</tr></tbody></table></div><div id="pasteErr" class="msg e"></div><div id="pasteCount" class="note" style="margin:6px 0"></div>';
