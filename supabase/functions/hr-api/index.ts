@@ -148,6 +148,23 @@ Deno.serve(async req => {
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
       return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: (l.data||[]).map(rowL) }, 200, origin);
     }
+    if (method === "POST" && route === "/api/employees/update") {
+      requireRole(user, ["admin", "editor"]); const b = await req.json();
+      const id = String(b.id || "").trim(), name = String(b.name || "").trim(), joinedRaw = String(b.joined || "").trim();
+      const joined = joinedRaw ? dateValue(joinedRaw) : null;
+      const shift = ["A", "C", "HC"].find(x => norm(x) === norm(b.shift));
+      const type = ["Chính thức", "Thời vụ", "Sinh viên"].find(x => norm(x) === norm(b.type));
+      const line = String(b.line || "").trim();
+      if (!id || !name || !line) return fail("Mã NV, Họ tên và Line là bắt buộc", 400, origin);
+      if (joinedRaw && !joined) return fail("Ngày vào không hợp lệ", 400, origin);
+      if (!shift || !type) return fail("Ca hoặc Loại nhân lực không hợp lệ", 400, origin);
+      const { data, error } = await admin.rpc("hr_update_employee", {
+        p_id:id,p_name:name,p_joined:joined,p_shift:shift,p_type:type,
+        p_vendor:String(b.vendor||"").trim(),p_line:line,p_title:String(b.title||"").trim(),
+        p_manager:String(b.manager||"").trim(),p_gender:String(b.gender||"").trim(),p_username:user.username
+      });
+      if (error) throw error; return reply(data,200,origin);
+    }
     if (method === "POST" && route === "/api/delta") {
       requireRole(user, ["admin", "editor"]); const body = await req.json();
       const { data, error } = await admin.rpc("hr_apply_delta", { p_body: body, p_username: user.username });
