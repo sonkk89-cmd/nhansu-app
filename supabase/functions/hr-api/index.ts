@@ -126,7 +126,8 @@ Deno.serve(async req => {
       const body = await req.json(), username = String(body.username || "").trim();
       if (!username || !body.password) return fail("Nhập tài khoản và mật khẩu", 400, origin);
       const client = createClient(URL, ANON, { auth: { persistSession: false } });
-      const { data, error } = await client.auth.signInWithPassword({ email: usernameEmail(username), password: String(body.password) });
+      const loginEmail = username.includes("@") ? username.toLowerCase() : usernameEmail(username);
+      const { data, error } = await client.auth.signInWithPassword({ email: loginEmail, password: String(body.password) });
       if (error || !data.session) return fail("Sai tài khoản hoặc mật khẩu", 401, origin);
       const { data: profile } = await admin.from("hr_users").select("username,name,role").eq("id", data.user.id).maybeSingle();
       if (!profile) return fail("Tài khoản chưa được cấp quyền trong hệ thống nhân sự", 403, origin);
