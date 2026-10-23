@@ -157,46 +157,59 @@ let pasteRows=[];
 const PASTE_HEADERS=['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Tên quản lý','Giới tính'];
 function openPasteImport(){
  pasteRows=[];
- $('modal').innerHTML='<div class="mo"><div style="max-width:980px;max-height:90vh;overflow:auto"><h3>Dán danh sách nhân sự</h3>'+
- '<p class="note">Copy các ô trong Excel rồi dán vào đây theo thứ tự cột bên dưới. Có thể dán kèm dòng tiêu đề.</p>'+
- '<textarea id="pasteEmp" rows="5" placeholder="Dán vùng dữ liệu từ Excel vào đây..." style="width:100%;min-height:110px;padding:10px;border:1.5px solid var(--bd);border-radius:8px;font:13px/1.5 monospace;resize:vertical"></textarea>'+
- '<div class="tb" style="margin:8px 0"><button class="b g" onclick="parsePastedEmployees()">Tách dữ liệu thành bảng</button><button class="b g" onclick="removePasteDuplicates()">Xóa dòng trùng ID</button><span id="pasteCount" class="note"></span></div>'+
- '<div id="pasteErr" class="msg e"></div><div id="pasteGrid"></div>'+
- '<div class="tb" style="margin-top:8px"><button class="b" onclick="previewPastedEmployees()">Kiểm tra dữ liệu</button>'+
+ const columns=PASTE_HEADERS.map((h,i)=>'<th style="position:static;min-width:'+(i===1?175:130)+'px">'+esc(h)+'</th>').join('');
+ const inputs=PASTE_HEADERS.map((h,i)=>'<td style="padding:4px;vertical-align:top"><textarea id="pasteCol'+i+'" rows="9" oninput="updatePasteStatus()" placeholder="Dán cột '+esc(h)+'..." style="width:100%;min-width:'+(i===1?165:120)+'px;height:220px;padding:8px;border:1px solid var(--bd);border-radius:6px;font:12px/1.5 monospace;resize:vertical"></textarea></td>').join('');
+ $('modal').innerHTML='<div class="mo"><div style="max-width:1120px;max-height:92vh;overflow:auto"><h3>Dán danh sách nhân sự theo từng cột</h3>'+
+ '<p class="note">Copy từng cột trong Excel rồi dán vào ô tiêu đề tương ứng bên dưới. Dán theo thứ tự Mã NV, Họ tên, Ngày vào, Ca, Loại nhân lực, Vendor, Line, Chức vụ, Tên quản lý, Giới tính. Các cột ghép với nhau theo thứ tự dòng.</p>'+
+ '<div class="tw" style="max-height:300px;overflow:auto"><table style="min-width:1320px;table-layout:fixed"><thead><tr>'+columns+'</tr></thead><tbody><tr>'+inputs+'</tr></tbody></table></div>'+
+ '<div id="pasteErr" class="msg e"></div><div id="pasteCount" class="note" style="margin:6px 0"></div>'+
+ '<div class="tb" style="margin-top:8px"><button class="b g" onclick="removePasteDuplicates()">Xóa dòng trùng ID</button><button class="b" onclick="previewPastedEmployees()">Kiểm tra dữ liệu</button>'+
  '<label class="b g" style="cursor:pointer;display:inline-block">Chọn file Excel<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importXlsx(this)"></label>'+
  '<button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
+ updatePasteStatus();
 }
-function parsePastedEmployees(){
- const raw=$('pasteEmp')?.value.trim(),err=$('pasteErr');
- if(!raw){err.textContent='Dán danh sách nhân sự vào ô trước.';return false}
- let rows=raw.split(/\r?\n/).map(line=>line.split('\t'));
- const first=nz(String(rows[0]?.[0]||'')).trim(),hasHeader=first.startsWith('ma nv')||first.includes('ma nhan vien');
- if(hasHeader)rows=rows.slice(1);
- rows=rows.map((v,i)=>({row:i+1+(hasHeader?1:0),v:v.slice(0,10)})).filter(x=>x.v.some(cell=>String(cell??'').trim()!==''));
- if(!rows.length){err.textContent='Không tìm thấy dòng dữ liệu nhân sự.';return false}
- pasteRows=rows;err.textContent='';renderPasteGrid();return true;
+function readPasteColumns(){
+ return PASTE_HEADERS.map((_,i)=>{
+  const raw=$('pasteCol'+i)?.value||'',v=raw.split(/\r?\n/);
+  while(v.length&&!v[v.length-1].trim())v.pop();
+  return v.map(x=>x.trim());
+ });
 }
-function pasteDuplicateIndexes(){
+function buildPasteRows(){
+ const cols=readPasteColumns(),first=nz(String(cols[0]?.[0]||'')).trim();
+ const hasHeader=first.startsWith('ma nv')||first.includes('ma nhan vien');
+ const offset=hasHeader?1:0, max=Math.max(0,...cols.map(c=>c.length-offset)),rows=[];
+ for(let i=0;i<max;i++)rows.push({row:i+1+offset,v:cols.map(c=>c[i+offset]||'')});
+ return {cols,rows,hasHeader};
+}
+function pasteDuplicateIndexes(rows){
  const prior=new Set(D.E.concat(D.R,S.adds||[]).map(e=>String(e?.[0]||'').trim().toLocaleUpperCase()).filter(Boolean));
  const seen=new Set(),dups=new Set();
- pasteRows.forEach((x,i)=>{const id=String(x.v?.[0]||'').trim().toLocaleUpperCase();if(!id)return;if(prior.has(id)||seen.has(id))dups.add(i);seen.add(id)});
+ rows.forEach((x,i)=>{const id=String(x.v?.[0]||'').trim().toLocaleUpperCase();if(!id)return;if(prior.has(id)||seen.has(id))dups.add(i);seen.add(id)});
  return dups;
 }
-function renderPasteGrid(){
- const box=$('pasteGrid');if(!box)return;
- if(!pasteRows.length){box.innerHTML='';return}
- const dups=pasteDuplicateIndexes();
- const heads=PASTE_HEADERS.map(x=>'<th style="position:static">'+esc(x)+'</th>').join('');
- const rows=pasteRows.map((x,i)=>'<tr style="'+(dups.has(i)?'background:#fff1f1':'')+'">'+x.v.concat(Array(Math.max(0,10-x.v.length)).fill('')).map((v,j)=>'<td style="padding:3px;min-width:'+(j===1?150:100)+'px"><input value="'+esc(v)+'" onchange="editPasteCell('+i+','+j+',this.value)" style="width:100%;padding:6px 7px;font-size:12px"></td>').join('')+'<td style="padding:4px;white-space:nowrap">'+(dups.has(i)?'<span style="color:var(--er);font-size:11px">Trùng ID · </span>':'')+'<button class="r" onclick="removePasteRow('+i+')">Xóa</button></td></tr>').join('');
- box.innerHTML='<div class="tw" style="max-height:330px;overflow:auto"><table style="min-width:1100px"><thead><tr>'+heads+'<th style="position:static">Thao tác</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
- const ct=$('pasteCount');if(ct)ct.textContent='Đã tách '+pasteRows.length+' dòng · '+dups.size+' dòng có ID trùng sẽ không được nhập';
+function updatePasteStatus(){
+ const box=$('pasteCount');if(!box)return;
+ const {cols,rows}=buildPasteRows(),dups=pasteDuplicateIndexes(rows);
+ const counts=cols.map((c,i)=>PASTE_HEADERS[i]+': '+c.length).join(' · ');
+ box.textContent='Số dòng ghép: '+rows.length+' · '+dups.size+' dòng có ID trùng sẽ không được nhập'+(counts?' | '+counts:'');
 }
-function editPasteCell(i,j,v){if(!pasteRows[i])return;pasteRows[i].v[j]=v;renderPasteGrid()}
-function removePasteRow(i){pasteRows.splice(i,1);renderPasteGrid()}
-function removePasteDuplicates(){const dups=pasteDuplicateIndexes();if(!dups.size){const e=$('pasteErr');if(e)e.textContent='Không có ID trùng trong dữ liệu đang dán.';return}pasteRows=pasteRows.filter((_,i)=>!dups.has(i));const e=$('pasteErr');if(e)e.textContent='Đã xóa '+dups.size+' dòng có ID trùng.';renderPasteGrid()}
+function parsePastedEmployees(){
+ const {rows}=buildPasteRows(),err=$('pasteErr');
+ if(!rows.length){if(err)err.textContent='Dán dữ liệu vào các cột tương ứng trước.';return false}
+ pasteRows=rows;if(err)err.textContent='';return true;
+}
+function removePasteDuplicates(){
+ const {cols,rows}=buildPasteRows(),dups=pasteDuplicateIndexes(rows);
+ if(!dups.size){const e=$('pasteErr');if(e)e.textContent='Không có ID trùng trong dữ liệu đang dán.';return}
+ const keep=rows.filter((_,i)=>!dups.has(i));
+ PASTE_HEADERS.forEach((_,j)=>{const el=$('pasteCol'+j);if(el)el.value=keep.map(x=>x.v[j]||'').join('\n')});
+ pasteRows=keep;const e=$('pasteErr');if(e)e.textContent='Đã xóa '+dups.size+' dòng trùng ID khỏi tất cả các cột để giữ đúng thứ tự dòng.';
+ updatePasteStatus();
+}
 async function previewPastedEmployees(){
- if(!pasteRows.length&&!parsePastedEmployees())return;
- const dups=pasteDuplicateIndexes(),valid=pasteRows.filter((_,i)=>!dups.has(i));
+ if(!parsePastedEmployees())return;
+ const dups=pasteDuplicateIndexes(pasteRows),valid=pasteRows.filter((_,i)=>!dups.has(i));
  if(!valid.length){$('pasteErr').textContent='Tất cả dòng đều trùng ID hoặc không có mã nhân viên; chưa có gì được nhập.';return}
  IMP={file:'Dán danh sách nhân sự',adds:valid.map(x=>({row:x.row,v:x.v})),res:[],leaves:[],filteredDuplicates:dups.size};
  try{
