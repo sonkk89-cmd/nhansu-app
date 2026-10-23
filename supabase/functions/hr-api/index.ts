@@ -5,12 +5,12 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(URL, SERVICE, { auth: { persistSession: false } });
 const allowed = new Set([
-  "https://mrhothang-ai.github.io",
+  "https://sonkk89-cmd.github.io",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ]);
 const headers = (origin: string | null) => ({
-  "Access-Control-Allow-Origin": origin && allowed.has(origin) ? origin : "https://mrhothang-ai.github.io",
+  "Access-Control-Allow-Origin": origin && allowed.has(origin) ? origin : "https://sonkk89-cmd.github.io",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
   "Vary": "Origin",
