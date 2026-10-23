@@ -35,7 +35,7 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
 <script>
 let D={E:[],R:[],L:[],me:{name:"",role:""}};
-const TABS=['Tổng quan','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị'];
+const TABS=['Tổng quan','DS nhân viên','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị'];
 const WD=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const CODE={P:'Phép năm (P)',TD:'Nghỉ tự do (TD)',R:'Không lương (R)',RCC:'Không lương CC (RCC)',O:'Nghỉ ốm (O)',Stop:'Báo nghỉ việc',"ĐM":'Đi muộn'};
 const TYPES=['Chính thức','Thời vụ','Sinh viên'];
@@ -58,7 +58,7 @@ function tbl(h,rows,more){return `<div class="tw"><table><tr>${h.map(x=>`<th>${x
 function shiftKpi(a){const c=cnt(a,e=>e[3]),gs=r=>{const g=cnt(r,e=>{const n=nz(e[9]);return n==='nam'?'Nam':n==='nu'?'Nữ':'Khác'});return `Nam ${g.Nam||0} · Nữ ${g['Nữ']||0}${g['Khác']?' · Chưa rõ '+g['Khác']:''}`},s=k=>gs(a.filter(e=>e[3]===k));return kpi([['Tổng nhân lực',a.length,gs(a)],['Ca A',c.A||0,s('A')],['Ca C',c.C||0,s('C')],['Hành chính (HC)',c.HC||0,s('HC')]])}
 const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
 const eH=['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
-function setTab(i){tab=i;st.msg='';render();if(i===7)loadAdmin()}
+function setTab(i){tab=i;st.msg='';render();if(i===8)loadAdmin()}
 function go(k,v){st[k]=v;render()}
 function inp(k,v){st[k]=v;const p=document.activeElement.selectionStart;render();const el=document.querySelector('[data-k="'+k+'"]');if(el){el.focus();try{el.setSelectionRange(p,p)}catch(e){}}}
 
@@ -132,6 +132,36 @@ function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x
  `<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng nghỉ</h3>${barsO(mk,bm)}</div><div class="card"><h3>Theo thứ trong tuần</h3>${barsO(WD.slice(1).concat(WD[0]),wd)}</div><div class="card"><h3>Theo lý do</h3>${bars(rs,f.length)}</div></div>`+
  tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]?`<button class="r" onclick="restore('${x[0]}')">Khôi phục</button>`:'']),
  f.length>rows.length?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('rn',st.rn+200)">Xem thêm (${f.length-rows.length})</button></div>`:'')}
+function vEmployees(){
+ const all=emps().slice().sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
+ const q=nz(st.eq||''),a=q?all.filter(e=>nz(e.join(' ')).includes(q)):all,canEdit=['admin','editor'].includes(D.me.role);
+ return `<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span></div></div>`+
+ tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>`]:[])]));
+}
+function editEmployee(id){
+ if(!['admin','editor'].includes(D.me.role))return;
+ const e=emps().find(x=>x[0]===id);if(!e)return;
+ const opts=(values,value)=>values.map(v=>`<option value="${esc(v)}" ${v===value?'selected':''}>${esc(v||'(trống)')}</option>`).join('');
+ const genders=[...new Set(['','Nam','Nữ',e[9]||''])];
+ $('modal').innerHTML=`<div class="mo"><div style="max-width:760px;max-height:90vh;overflow:auto"><h3>Sửa thông tin nhân viên</h3><p class="note">Mã NV: <b>${esc(e[0])}</b> (không thể thay đổi mã)</p>
+ <div class="f"><div><label>Họ tên *</label><input id="eeName" value="${esc(e[1])}"></div><div><label>Ngày vào</label><input id="eeJoined" type="date" value="${esc(e[2])}"></div>
+ <div><label>Ca *</label><select id="eeShift">${opts(['A','C','HC'],e[3])}</select></div><div><label>Loại nhân lực *</label><select id="eeType">${opts(TYPES,e[4])}</select></div>
+ <div><label>Vendor</label><input id="eeVendor" value="${esc(e[5])}"></div><div><label>Line *</label><input id="eeLine" value="${esc(e[6])}"></div>
+ <div><label>Chức vụ</label><input id="eeTitle" value="${esc(e[7])}"></div><div><label>Tên quản lý</label><input id="eeManager" value="${esc(e[8])}"></div>
+ <div><label>Giới tính</label><select id="eeGender">${opts(genders,e[9]||'')}</select></div></div><div id="eeError" class="msg e"></div>
+ <div class="tb" style="margin-top:10px"><button class="b" onclick="saveEmployeeEdit(${esc(JSON.stringify(e[0]))})">Lưu thay đổi</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
+}
+async function saveEmployeeEdit(id){
+ const b={id,name:$('eeName').value.trim(),joined:$('eeJoined').value||null,shift:$('eeShift').value,type:$('eeType').value,vendor:$('eeVendor').value.trim(),line:$('eeLine').value.trim(),title:$('eeTitle').value.trim(),manager:$('eeManager').value.trim(),gender:$('eeGender').value};
+ if(!b.name||!b.line){$('eeError').textContent='Vui lòng nhập Họ tên và Line.';return}
+ try{
+  const r=await HRCloud.api('/api/employees/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){$('eeError').textContent=j.error||'Không lưu được thay đổi.';return}
+  closeM();st.msg='Đã sửa thông tin nhân viên '+id;await load();
+ }catch(e){$('eeError').textContent='Không kết nối được máy chủ.'}
+}
 function vManage(){const a=!st.mq?[]:emps().filter(e=>sf(e[3])&&nz(e.join(' ')).includes(nz(st.mq))),lines=[...new Set(emps().map(e=>e[6]))].sort(),vs=[...new Set(emps().map(e=>e[5]).filter(Boolean))].sort();
  return `<div class="card"><h3>Thêm nhân viên mới</h3><div class="f"><div><label>Mã NV *</label><input id="nI"></div><div><label>Họ tên *</label><input id="nN"></div><div><label>Ngày vào *</label><input id="nD" type="date"></div><div><label>Ca *</label><select id="nC"><option>A</option><option>C</option><option>HC</option></select></div><div><label>Loại nhân lực *</label><select id="nT">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div><div><label>Vendor</label><input id="nV" list="vl"><datalist id="vl">${vs.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Line *</label><input id="nL" list="ll"><datalist id="ll">${lines.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Chức vụ</label><input id="nP"></div><div><label>Tên quản lý</label><input id="nM"></div><div><label>Giới tính</label><select id="nG"><option></option><option>Nam</option><option>Nữ</option></select></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addEmp()">Thêm nhân viên</button><button class="b g" onclick="exportXlsx()">Xuất Excel (đã cập nhật)</button><button class="b" onclick="openPasteImport()">Nhập từ Excel</button><span class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div></div>
  ${chkb()}<div class="tb"><input data-k="mq" placeholder="Tìm nhân viên để cho nghỉ việc" value="${esc(st.mq)}" oninput="inp('mq',this.value)"><span class="note">${st.mq?'Tìm thấy '+a.length+' nhân viên':'Gõ tên hoặc mã NV để hiện nhân viên cần cho nghỉ việc'}</span></div>`+
@@ -254,7 +284,7 @@ async function exportXlsx(){const wb=XLSX.utils.book_new(),A=(h,r)=>XLSX.utils.a
  XLSX.utils.book_append_sheet(wb,A(['Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do','Ngày'],leaves().map(x=>x.slice(0,8))),'Nghỉ hằng ngày');
  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
  XLSX.writeFile(wb,'bao_cao_nhan_su.xlsx')}
-const ROLEL={admin:'Quản trị (toàn quyền)',editor:'Nhập liệu',viewer:'Chỉ xem'},ACTL={add_employee:'Thêm nhân viên',resign:'Nghỉ việc',restore:'Khôi phục',leave:'Ghi nghỉ',delete_leave:'Xóa nghỉ',user_save:'Lưu tài khoản',user_delete:'Xóa tài khoản',import:'Nhập từ Excel'};
+const ROLEL={admin:'Quản trị (toàn quyền)',editor:'Nhập liệu',viewer:'Chỉ xem'},ACTL={employee_edit:'Sửa thông tin nhân viên',add_employee:'Thêm nhân viên',resign:'Nghỉ việc',restore:'Khôi phục',leave:'Ghi nghỉ',delete_leave:'Xóa nghỉ',user_save:'Lưu tài khoản',user_delete:'Xóa tài khoản',import:'Nhập từ Excel'};
 async function loadAdmin(){try{const [u,a,c,im]=await Promise.all([HRCloud.api('/api/users'),HRCloud.api('/api/audit'),HRCloud.api('/api/checks'),HRCloud.api('/api/imports')]);if(u.ok)st.users=await u.json();if(a.ok)st.audit=await a.json();if(c.ok)st.checks=await c.json();if(im.ok)st.imps=await im.json();render()}catch(e){}}
 async function saveUser(){const b={username:$('aU').value.trim(),name:$('aN').value.trim(),role:$('aR').value,password:$('aP').value};
  const r=await HRCloud.api('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}),j=await r.json();
@@ -279,9 +309,9 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
   if(!r.ok)err=(await r.json()).error||'Lỗi lưu dữ liệu'}catch(e){err='Không kết nối được máy chủ'}
  S={adds:[],res:{},leaves:[]};st.msg=err?'!THẤT BẠI, chưa lưu: '+err:(ok||'Đã lưu vào máy chủ');if(err)alert('THẤT BẠI, chưa lưu: '+err);await load()}
 async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}D=await r.json();$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){}}
-function render(){if(tab===7&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===7&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
+function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===8&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc';
- const keep=window.scrollY;$('app').innerHTML=[vOverview,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
+ const keep=window.scrollY;$('app').innerHTML=[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
 </script></body></html>
 
