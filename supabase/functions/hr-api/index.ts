@@ -127,8 +127,10 @@ Deno.serve(async req => {
       if (!username || !body.password) return fail("Nhập tài khoản và mật khẩu", 400, origin);
       const client = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
       const loginEmail = username.includes("@") ? username.toLowerCase() : usernameEmail(username);
-      const { data, error } = await client.auth.signInWithPassword({ email: loginEmail, password: String(body.password) });
-      if (error || !data.session) return fail("Sai tài khoản hoặc mật khẩu", 401, origin);
+      const authResult = await client.auth.signInWithPassword({ email: loginEmail, password: String(body.password) });
+      const data = authResult?.data;
+      const error = authResult?.error;
+      if (error || !data?.session || !data?.user) return fail("Không nhận được phiên đăng nhập từ Supabase Auth", 401, origin);
       const { data: profile } = await admin.from("hr_users").select("username,name,role").eq("id", data.user.id).maybeSingle();
       if (!profile) return fail("Tài khoản chưa được cấp quyền trong hệ thống nhân sự", 403, origin);
       return reply({ ok: true, token: data.session.access_token, user: profile }, 200, origin);
