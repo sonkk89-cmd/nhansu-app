@@ -1,24 +1,30 @@
-# Nhân sự nội bộ — GitHub Pages + Supabase
+# Ứng dụng nhân sự
 
-Bản này thay ứng dụng đi tuần hiện tại bằng ứng dụng nhân sự tại trang chính của repository. Tệp trong `site/` là nội dung website; thư mục `supabase/` chứa migration và Edge Function. Không có cơ sở dữ liệu nhân sự hoặc mật khẩu cũ trong gói.
+Repo này chỉ chứa ứng dụng nhân sự. Website dùng GitHub Pages; dữ liệu và đăng nhập dùng Supabase.
 
-## Supabase
+## Bật website
+
+Trong GitHub mở **Settings → Pages**. Ở **Build and deployment**, chọn **Deploy from a branch**, nhánh `main`, thư mục `/(root)`, rồi **Save**. Sau khi GitHub Pages hoàn tất triển khai, địa chỉ website là:
+
+`https://sonkk89-cmd.github.io/nhansu-app/`
+
+## Cấu hình Supabase
 
 Project URL: `https://rhcnogepfjvcikhvfubx.supabase.co`  
 Project ref: `rhcnogepfjvcikhvfubx`
 
-1. Tắt đăng ký email công khai trong Authentication settings.
-2. Mở SQL Editor và chạy `supabase/migrations/001_hr_schema.sql`. Migration tạo bảng HR trống, bật RLS và không cấp quyền trực tiếp cho `anon`/`authenticated`.
-3. Cài Supabase CLI và triển khai function:
+1. Trong Authentication settings, tắt đăng ký công khai.
+2. Mở SQL Editor và chạy `supabase/migrations/001_hr_schema.sql`. Migration tạo các bảng HR trống, bật RLS và không cấp quyền truy cập bảng trực tiếp cho `anon`/`authenticated`.
+3. Cài Supabase CLI rồi triển khai Edge Function:
 
    ```powershell
    npx supabase login
    npx supabase functions deploy hr-api --project-ref rhcnogepfjvcikhvfubx
    ```
 
-   `supabase/config.toml` đặt `verify_jwt = false` để route đăng nhập công khai tới được function. Function tự xác minh Supabase Auth cho mọi route dữ liệu. Khóa server chỉ được đọc từ môi trường Edge Function, không nằm trong mã nguồn website.
+   Function dùng `SUPABASE_SERVICE_ROLE_KEY` ở môi trường máy chủ; khóa này không nằm trong website.
 
-4. Tạo user đầu tiên trong Authentication → Users → Add user, email `admin@hr.internal`, mật khẩu mạnh và xác nhận email. Sau đó chạy một lần:
+4. Tạo tài khoản đầu tiên trong **Authentication → Users → Add user** bằng email `admin@hr.internal`, mật khẩu mạnh và xác nhận email. Sau đó chạy một lần trong SQL Editor:
 
    ```sql
    insert into public.hr_users(id, username, name, role)
@@ -27,17 +33,11 @@ Project ref: `rhcnogepfjvcikhvfubx`
    on conflict (id) do update set username = excluded.username, name = excluded.name, role = 'admin';
    ```
 
-   Đăng nhập app bằng username `admin` và mật khẩu vừa đặt. Admin có thể tạo các tài khoản khác trong app.
+   Đăng nhập bằng username `admin` và mật khẩu vừa đặt. Admin có thể tạo tài khoản khác trong ứng dụng.
 
-## GitHub Pages
+## Dữ liệu
 
-Sao chép nội dung `site/` vào thư mục gốc của repository hiện tại, thay `index.html` cũ của app đi tuần bằng `site/index.html`, và xóa `factory.jpg` cùng `layout.png` nếu không còn được dùng ở nơi khác. GitHub Pages sẽ mở app nhân sự tại URL gốc:
+Gói app ban đầu không có `data/hr.db`, nên dữ liệu nhân sự và tài khoản cũ không được chuyển sang. Sau khi cấu hình Supabase, hãy đăng nhập admin và nhập dữ liệu bằng chức năng Excel.
 
-`https://mrhothang-ai.github.io/Audit_hien_truong_ILS/`
-
-Cần commit `supabase/` cùng repository để quản lý mã migration/function. Publishable key nằm trong `site/config.js` và được thiết kế để public; dữ liệu vẫn bị khóa trong database và chỉ Edge Function được phép truy cập.
-
-## Dữ liệu và tài khoản
-
-ZIP app ban đầu không chứa `data/hr.db`; tạo lại tài khoản trong Supabase Auth và nhập dữ liệu qua chức năng Excel sau khi triển khai. Mật khẩu cũ không thể chuyển vì được băm bằng cơ chế khác.
+Publishable key trong `config.js` được thiết kế để xuất hiện ở trình duyệt. Không đưa `service_role` key hoặc mật khẩu vào repo.
 
