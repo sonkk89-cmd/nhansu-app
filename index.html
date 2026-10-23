@@ -118,7 +118,7 @@ function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x
  tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]?`<button class="r" onclick="restore('${x[0]}')">Khôi phục</button>`:'']),
  f.length>rows.length?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('rn',st.rn+200)">Xem thêm (${f.length-rows.length})</button></div>`:'')}
 function vManage(){const a=!st.mq?[]:emps().filter(e=>sf(e[3])&&nz(e.join(' ')).includes(nz(st.mq))),lines=[...new Set(emps().map(e=>e[6]))].sort(),vs=[...new Set(emps().map(e=>e[5]).filter(Boolean))].sort();
- return `<div class="card"><h3>Thêm nhân viên mới</h3><div class="f"><div><label>Mã NV *</label><input id="nI"></div><div><label>Họ tên *</label><input id="nN"></div><div><label>Ngày vào *</label><input id="nD" type="date"></div><div><label>Ca *</label><select id="nC"><option>A</option><option>C</option><option>HC</option></select></div><div><label>Loại nhân lực *</label><select id="nT">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div><div><label>Vendor</label><input id="nV" list="vl"><datalist id="vl">${vs.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Line *</label><input id="nL" list="ll"><datalist id="ll">${lines.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Chức vụ</label><input id="nP"></div><div><label>Tên quản lý</label><input id="nM"></div><div><label>Giới tính</label><select id="nG"><option></option><option>Nam</option><option>Nữ</option></select></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addEmp()">Thêm nhân viên</button><button class="b g" onclick="exportXlsx()">Xuất Excel (đã cập nhật)</button><label class="b" style="cursor:pointer;display:inline-block">Nhập từ Excel<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importXlsx(this)"></label><span class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div></div>
+ return `<div class="card"><h3>Thêm nhân viên mới</h3><div class="f"><div><label>Mã NV *</label><input id="nI"></div><div><label>Họ tên *</label><input id="nN"></div><div><label>Ngày vào *</label><input id="nD" type="date"></div><div><label>Ca *</label><select id="nC"><option>A</option><option>C</option><option>HC</option></select></div><div><label>Loại nhân lực *</label><select id="nT">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div><div><label>Vendor</label><input id="nV" list="vl"><datalist id="vl">${vs.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Line *</label><input id="nL" list="ll"><datalist id="ll">${lines.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Chức vụ</label><input id="nP"></div><div><label>Tên quản lý</label><input id="nM"></div><div><label>Giới tính</label><select id="nG"><option></option><option>Nam</option><option>Nữ</option></select></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addEmp()">Thêm nhân viên</button><button class="b g" onclick="exportXlsx()">Xuất Excel (đã cập nhật)</button><button class="b" onclick="openPasteImport()">Nhập từ Excel</button><span class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div></div>
  ${chkb()}<div class="tb"><input data-k="mq" placeholder="Tìm nhân viên để cho nghỉ việc" value="${esc(st.mq)}" oninput="inp('mq',this.value)"><span class="note">${st.mq?'Tìm thấy '+a.length+' nhân viên':'Gõ tên hoặc mã NV để hiện nhân viên cần cho nghỉ việc'}</span></div>`+
  (!st.mq?'':tbl(['Mã NV','Họ tên','Ca','Loại','Line','Vendor','Ngày vào',''],a.slice(0,st.mn).map(e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[6]),esc(e[5]),fd(e[2]),`<button class="r" onclick="askResign('${e[0]}')">Nghỉ việc</button>`]),a.length>st.mn?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('mn',st.mn+200)">Xem thêm</button></div>`:''))}
 function msg(m){st.msg=m;render()}
@@ -138,6 +138,32 @@ async function exList(){const x=window._ex;if(!x)return;const wb=XLSX.utils.book
 let IMP=null;
 const IMPN={adds:'Thêm nhân viên',res:'Báo nghỉ việc',leaves:'Báo nghỉ hằng ngày'};
 function closeM(){$('modal').innerHTML=''}
+function openPasteImport(){
+ $('modal').innerHTML='<div class="mo"><div style="max-width:780px;max-height:88vh;overflow:auto"><h3>Dán danh sách nhân sự</h3>'+
+ '<p class="note">Copy các ô trong Excel rồi dán vào đây. Thứ tự cột: <b>Mã NV, Họ tên, Ngày vào, Ca, Loại nhân lực, Vendor, Line, Chức vụ, Tên quản lý, Giới tính</b>. Có thể dán kèm dòng tiêu đề.</p>'+
+ '<textarea id="pasteEmp" rows="10" placeholder="Dán vùng dữ liệu từ Excel vào đây..." style="width:100%;min-height:220px;padding:10px;border:1.5px solid var(--bd);border-radius:8px;font:13px/1.5 monospace;resize:vertical"></textarea>'+
+ '<div id="pasteErr" class="msg e"></div><div class="tb" style="margin-top:8px"><button class="b" onclick="previewPastedEmployees()">Kiểm tra dữ liệu</button>'+
+ '<label class="b g" style="cursor:pointer;display:inline-block">Chọn file Excel<input type="file" accept=".xlsx,.xls" style="display:none" onchange="importXlsx(this)"></label>'+
+ '<button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
+}
+async function previewPastedEmployees(){
+ const raw=$('pasteEmp').value.trim(),err=$('pasteErr');
+ if(!raw){err.textContent='Dán danh sách nhân sự vào ô trước.';return}
+ let rows=raw.split(/\r?\n/).map(line=>line.split('\t'));
+ const first=nz(String(rows[0]?.[0]||'')).trim();
+ const hasHeader=first.startsWith('ma nv')||first.includes('ma nhan vien');
+ if(hasHeader)rows=rows.slice(1);
+ rows=rows.filter(row=>row.some(cell=>String(cell??'').trim()!==''));
+ if(!rows.length){err.textContent='Không tìm thấy dòng dữ liệu nhân sự.';return}
+ IMP={file:'Dán danh sách nhân sự',adds:rows.map((v,i)=>({row:i+1+(hasHeader?1:0),v})),res:[],leaves:[]};
+ try{
+  const r=await HRCloud.api('/api/import/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(IMP)});
+  if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){err.textContent=j.error||'Không kiểm tra được dữ liệu.';return}
+  showPreview(j)
+ }catch(e){err.textContent='Không kết nối được máy chủ. Dữ liệu chưa được ghi.'}
+}
 function importXlsx(el){const f=el.files[0];if(!f)return;const rd=new FileReader();rd.onload=async ev=>{try{
  const wb=XLSX.read(ev.target.result,{type:'array'});
  const sh=n=>wb.Sheets[n]?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}).map((r,i)=>({row:i+1,v:r})).slice(1).filter(x=>x.v.some(c=>String(c).trim()!=='')):null;
@@ -150,10 +176,10 @@ function importXlsx(el){const f=el.files[0];if(!f)return;const rd=new FileReader
  showPreview(j)}catch(err){msg('!Không đọc được file Excel')}};rd.readAsArrayBuffer(f);el.value=''}
 function showPreview(j){const K=['adds','res','leaves'],okN=K.reduce((s,k)=>s+j[k].ok,0),errN=K.reduce((s,k)=>s+j[k].errors.length,0),wN=K.reduce((s,k)=>s+j[k].warnings.length,0);
  const er=K.flatMap(k=>j[k].errors.map(e=>[IMPN[k],e.row,esc(e.msg)])),wr=K.flatMap(k=>j[k].warnings.map(e=>[IMPN[k],e.row,esc(e.msg)]));
- $('modal').innerHTML=`<div class="mo"><div style="max-width:780px;max-height:88vh;overflow:auto"><h3>Kiểm tra file trước khi nhập: ${esc(IMP.file)}</h3>
+ $('modal').innerHTML=`<div class="mo"><div style="max-width:780px;max-height:88vh;overflow:auto"><h3>Kiểm tra trước khi nhập: ${esc(IMP.file)}</h3>
  <div class="note" style="margin:0 0 8px">Chưa có gì được ghi vào hệ thống cho đến khi bạn bấm “Xác nhận nhập”.</div>`+
  tbl(['Sheet','Dòng đọc được','Hợp lệ','Lỗi (bị bỏ qua)','Cảnh báo','Đã có / ví dụ (bỏ qua)'],K.map(k=>[IMPN[k],j[k].total,`<b style="color:var(--ok)">${j[k].ok}</b>`,j[k].errors.length?`<b style="color:var(--er)">${j[k].errors.length}</b>`:0,j[k].warnings.length?`<b style="color:var(--wr)">${j[k].warnings.length}</b>`:0,j[k].skipped]))+
- (errN?`<h3 style="margin:12px 0 6px;color:var(--er)">Dòng lỗi – sẽ KHÔNG được nhập (sửa trong Excel rồi nhập lại)</h3>`+tbl(['Sheet','Dòng Excel','Lý do'],er.slice(0,100))+(er.length>100?`<div class="note">Chỉ hiện 100 lỗi đầu trong ${er.length}.</div>`:''):'')+
+ (errN?`<h3 style="margin:12px 0 6px;color:var(--er)">Dòng lỗi – sẽ KHÔNG được nhập (sửa dữ liệu rồi nhập lại)</h3>`+tbl(['Sheet','Dòng nguồn','Lý do'],er.slice(0,100))+(er.length>100?`<div class="note">Chỉ hiện 100 lỗi đầu trong ${er.length}.</div>`:''):'')+
  (wN?`<h3 style="margin:12px 0 6px;color:var(--wr)">Cảnh báo – vẫn được nhập, bạn nên kiểm tra lại</h3>`+tbl(['Sheet','Dòng Excel','Nội dung'],wr.slice(0,60))+(wr.length>60?`<div class="note">Chỉ hiện 60 cảnh báo đầu trong ${wr.length}.</div>`:''):'')+
  `<p style="margin:12px 0 4px"><b>${okN}</b> dòng hợp lệ sẽ được nhập${errN?`, <b style="color:var(--er)">${errN}</b> dòng lỗi bị bỏ qua`:''}.</p>
  <div class="tb" style="margin-top:8px"><button class="b" ${okN?'':'disabled style="opacity:.5"'} onclick="commitImport()">Xác nhận nhập ${okN} dòng</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`}
