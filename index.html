@@ -119,7 +119,7 @@ function vLeave(){const all=leaves().filter(x=>sf(x[3]));let f,title;
  const ctl=st.mode==='day'?`<input type="date" value="${st.day}" onchange="go('day',this.value)">`:st.mode==='mon'?`<input type="month" value="${st.mon}" onchange="go('mon',this.value)">`:st.mode==='yr'?`<input type="number" min="2020" max="2100" value="${st.yr}" onchange="go('yr',this.value)" style="width:100px">`:'';
  return chkb()+`<div class="tb"><div class="seg">${seg}</div>${ctl}${['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="openPasteImport(\'leaves\')">Nhập nghỉ hằng ngày</button>':''}</div>`+kpi([['Lượt nghỉ – '+title,f.length],['Ngày đã ghi nhận',days],['Nghỉ tự do (TD)',f.filter(x=>x[5]==='TD').length],['Nghỉ phép (P)',f.filter(x=>x[5]==='P').length]])+
  `<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo thứ trong tuần</h3>${barsO(WD.slice(1).concat(WD[0]),wd)}</div><div class="card"><h3>Theo loại nghỉ</h3>${bars(cnt(f,x=>CODE[x[5]]||x[5]),f.length)}</div><div class="card"><h3>Theo line</h3>${bars(cnt(f,x=>x[2]),f.length)}</div></div>`+
- ltCards(f)+(!st.lt.length?'<div class="note" style="margin:0 0 8px">Tích vào ô loại nhân lực ở trên để xem danh sách người nghỉ.</div>':tbl(['Ngày','Thứ','Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do',''],f.filter(x=>st.lt.includes(x[4]||'?')).map(x=>[fd(x[7]),wdOf(x[7]),esc(x[0]),esc(x[1])||'<span class="note">(chưa có trong DS)</span>',esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),x[8]?`<button class="r" onclick="delLeave('${x[0]}','${x[7]}')">Xóa</button>`:''])))+
+ ltCards(f)+(!st.lt.length?'<div class="note" style="margin:0 0 8px">Tích vào ô loại nhân lực ở trên để xem danh sách người nghỉ.</div>':tbl(['Ngày','Thứ','Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do',''],f.filter(x=>st.lt.includes(x[4]||'?')).map(x=>[fd(x[7]),wdOf(x[7]),esc(x[0]),esc(x[1])||'<span class="note">(chưa có trong DS)</span>',esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),['admin','editor'].includes(D.me.role)?\`<button class="b g" onclick="editLeave('\${x[0]}','\${x[7]}','\${x[5]}','\${esc(x[6]).replace(/'/g,"&#39;")}')">Sửa</button>\`:''])))+
  `${vEmpLeave()}<div class="card" style="margin-top:12px"><h3>Ghi nhận nghỉ cho ngày bất kỳ</h3><div class="f"><div><label>Nhân viên (mã hoặc tên)</label><input id="lE" list="el" placeholder="Gõ để tìm"><datalist id="el">${a.map(e=>`<option value="${esc(e[0])} - ${esc(e[1])}">`).join('')}</datalist></div><div><label>Ngày nghỉ</label><input id="lD" type="date" value="${st.day}"></div><div><label>Loại nghỉ</label><select id="lC">${Object.entries(CODE).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div><label>Lý do</label><input id="lR"></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addLeave()">Ghi nhận</button><span class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div>
  <p class="note">File gốc chỉ có danh sách nghỉ của 19/10/2026 (không có ngày tháng cho các ngày trước), nên thống kê tháng/năm/thứ sẽ đầy dần khi bạn ghi nhận mỗi ngày.</p></div>`}
 function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x=>(x[7]||'').slice(0,7)).filter(Boolean))].sort().reverse();
@@ -130,7 +130,7 @@ function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x
  return chkb()+`<div class="tb"><select onchange="go('rm',this.value)"><option value="">Tất cả tháng</option>${ms.map(m=>`<option value="${m}" ${m===st.rm?'selected':''}>${m.split('-').reverse().join('/')}</option>`).join('')}</select><select onchange="go('rt',this.value)"><option value="">Tất cả loại</option>${TYPES.map(t=>`<option ${t===st.rt?'selected':''}>${t}</option>`).join('')}</select><input data-k="rq" placeholder="Tìm tên / mã NV" value="${esc(st.rq)}" oninput="inp('rq',this.value)">${['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="openPasteImport(\'res\')">Nhập nghỉ việc</button>':''}</div>`+
  kpi([['Người nghỉ việc (theo bộ lọc)',f.length],['Chính thức',f.filter(x=>x[4]==='Chính thức').length],['Thời vụ',f.filter(x=>x[4]==='Thời vụ').length],['Sinh viên',f.filter(x=>x[4]==='Sinh viên').length]])+
  `<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng nghỉ</h3>${barsO(mk,bm)}</div><div class="card"><h3>Theo thứ trong tuần</h3>${barsO(WD.slice(1).concat(WD[0]),wd)}</div><div class="card"><h3>Theo lý do</h3>${bars(rs,f.length)}</div></div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]?`<button class="r" onclick="restore('${x[0]}')">Khôi phục</button>`:'']),
+ tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]&&['admin','editor'].includes(D.me.role)?\`<button class="b g" onclick="editResignation('\${x[0]}','\${x[7]}','\${esc(x[8]).replace(/'/g,"&#39;")}')">Sửa</button><button class="r" onclick="restore('\${x[0]}')">Khôi phục</button>\`:'']),
  f.length>rows.length?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('rn',st.rn+200)">Xem thêm (${f.length-rows.length})</button></div>`:'')}
 function vEmployees(){
  const all=emps().slice().sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
@@ -176,6 +176,36 @@ function addEmp(){const g=i=>$(i).value.trim(),id=g('nI'),nm=g('nN'),d=g('nD'),l
 function askResign(id){const e=D.E.concat(S.adds).find(x=>x[0]===id);$('modal').innerHTML=`<div class="mo"><div><h3>Cho nghỉ việc: ${esc(e[1])} (${esc(id)})</h3><div class="f" style="grid-template-columns:1fr"><div><label>Ngày nghỉ</label><input id="rD" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div><label>Lý do</label><select id="rR"><option>Nhân viên báo nghỉ việc</option><option>Nghỉ tự do nhiều ngày</option><option>Kết thúc thực tập</option><option>Về đi học</option><option>Leader xác nhận nghỉ việc</option><option>Khác</option></select></div></div><div class="tb" style="margin-top:12px"><button class="b" onclick="doResign('${id}')">Xác nhận</button><button class="b g" onclick="$('modal').innerHTML=''">Hủy</button></div></div></div>`}
 function doResign(id){const d=$('rD').value;if(!d)return;S.res[id]=[d,$('rR').value];$('modal').innerHTML='';save('Đã lưu: nhân viên đã chuyển sang danh sách nghỉ việc')}
 function restore(id){(S.restore=S.restore||[]).push(id);save('Đã khôi phục nhân viên')}
+function editLeave(id,date,code,reason){
+ if(!['admin','editor'].includes(D.me.role))return;
+ $('modal').innerHTML=`<div class="mo"><div><h3>Sửa lượt nghỉ hằng ngày</h3><p class="note">Nhân viên: <b>${esc(id)}</b></p>
+ <div class="f"><div><label>Ngày nghỉ *</label><input id="leDate" type="date" value="${esc(date)}"></div><div><label>Loại nghỉ *</label><select id="leCode">${Object.entries(CODE).map(([k,v])=>`<option value="${esc(k)}" ${k===code?'selected':''}>${esc(v)}</option>`).join('')}</select></div><div><label>Lý do</label><input id="leReason" value="${esc(reason)}"></div></div><div id="leError" class="msg e"></div>
+ <div class="tb" style="margin-top:10px"><button class="b" onclick="saveLeaveEdit('${esc(id)}','${esc(date)}')">Lưu thay đổi</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
+}
+async function saveLeaveEdit(id,oldDate){
+ const date=$('leDate').value,code=$('leCode').value,reason=$('leReason').value.trim();
+ if(!date){$('leError').textContent='Vui lòng chọn ngày nghỉ.';return}
+ try{const r=await HRCloud.api('/api/leaves/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,oldDate,date,code,reason})});
+ if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}const j=await r.json().catch(()=>({}));
+ if(!r.ok){$('leError').textContent=j.error||'Không lưu được thay đổi.';return}
+ closeM();st.msg='Đã sửa lượt nghỉ của '+id;await load();
+ }catch(e){$('leError').textContent='Không kết nối được máy chủ.'}
+}
+function editResignation(id,date,reason){
+ if(!['admin','editor'].includes(D.me.role))return;
+ $('modal').innerHTML=`<div class="mo"><div><h3>Sửa thông tin nghỉ việc</h3><p class="note">Nhân viên: <b>${esc(id)}</b></p>
+ <div class="f"><div><label>Ngày nghỉ *</label><input id="reDate" type="date" value="${esc(date)}"></div><div><label>Lý do</label><input id="reReason" value="${esc(reason)}"></div></div><div id="reError" class="msg e"></div>
+ <div class="tb" style="margin-top:10px"><button class="b" onclick="saveResignationEdit('${esc(id)}')">Lưu thay đổi</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
+}
+async function saveResignationEdit(id){
+ const date=$('reDate').value,reason=$('reReason').value.trim();
+ if(!date){$('reError').textContent='Vui lòng chọn ngày nghỉ.';return}
+ try{const r=await HRCloud.api('/api/resignations/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,date,reason})});
+ if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}const j=await r.json().catch(()=>({}));
+ if(!r.ok){$('reError').textContent=j.error||'Không lưu được thay đổi.';return}
+ closeM();st.msg='Đã sửa thông tin nghỉ việc của '+id;await load();
+ }catch(e){$('reError').textContent='Không kết nối được máy chủ.'}
+}
 function addLeave(){const v=$('lE').value.trim(),id=v.split(' - ')[0].trim(),e=emps().find(x=>x[0]===id),d=$('lD').value;
  if(!e||!d)return msg('!Chọn nhân viên trong danh sách và nhập ngày');
  S.leaves.push([id,e[1],e[6],e[3],e[4],$('lC').value,$('lR').value.trim(),d]);st.day=d;save('Đã ghi nhận nghỉ – đã lưu vào máy chủ')}
