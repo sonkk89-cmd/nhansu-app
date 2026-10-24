@@ -148,6 +148,27 @@ Deno.serve(async req => {
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
       return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: (l.data||[]).map(rowL) }, 200, origin);
     }
+    if (method === "POST" && route === "/api/leaves/update") {
+      requireRole(user, ["admin", "editor"]); const b = await req.json();
+      const id=String(b.id||"").trim(), oldDate=dateValue(b.oldDate), date=dateValue(b.date);
+      const code=["P","TD","R","RCC","O","Stop","ĐM"].find(x=>norm(x)===norm(b.code));
+      if(!id||!oldDate||!date||!code) return fail("Mã nhân viên, ngày nghỉ hoặc loại nghỉ không hợp lệ",400,origin);
+      const {data:existing,error:lookupError}=await admin.from("leaves").select("emp_id").eq("emp_id",id).eq("date",oldDate).maybeSingle();
+      if(lookupError) throw lookupError; if(!existing) return fail("Không tìm thấy lượt nghỉ cần sửa",404,origin);
+      if(date!==oldDate){const {data:duplicate,error:dupError}=await admin.from("leaves").select("emp_id").eq("emp_id",id).eq("date",date).maybeSingle(); if(dupError)throw dupError; if(duplicate)return fail("Nhân viên đã có lượt nghỉ trong ngày này",409,origin);}
+      const reason=String(b.reason||"").trim();
+      const {data,error}=await admin.from("leaves").update({date,code,reason}).eq("emp_id",id).eq("date",oldDate).select("emp_id").maybeSingle();
+      if(error)throw error; if(!data)return fail("Không tìm thấy lượt nghỉ cần sửa",404,origin);
+      await audit(user.username,"leave_update",`${id}: ${oldDate} → ${date} (${code})`); return reply({ok:true},200,origin);
+    }
+    if (method === "POST" && route === "/api/resignations/update") {
+      requireRole(user, ["admin", "editor"]); const b = await req.json();
+      const id=String(b.id||"").trim(), date=dateValue(b.date), reason=String(b.reason||"").trim();
+      if(!id||!date) return fail("Mã nhân viên hoặc ngày nghỉ không hợp lệ",400,origin);
+      const {data,error}=await admin.from("employees").update({resign_date:date,resign_reason:reason}).eq("id",id).eq("status","resigned").select("id").maybeSingle();
+      if(error)throw error; if(!data)return fail("Không tìm thấy nhân viên trong danh sách nghỉ việc",404,origin);
+      await audit(user.username,"resignation_update",`${id}: ngày nghỉ ${date}`); return reply({ok:true},200,origin);
+    }
     if (method === "POST" && route === "/api/employees/update") {
       requireRole(user, ["admin", "editor"]); const b = await req.json();
       const id = String(b.id || "").trim(), name = String(b.name || "").trim(), joinedRaw = String(b.joined || "").trim();
