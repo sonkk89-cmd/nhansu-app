@@ -304,12 +304,13 @@ function removePasteDuplicates(){
 }
 async function previewPastedEmployees(){
  savePasteColumns();
- const all={};let filtered=0,total=0;
+ const all={};let filtered=0,total=0,rawTotal=0;
  for(const key of Object.keys(PASTE_SHEETS)){
   const {rows}=buildPasteRows(key),dups=pasteDuplicateIndexes(key,rows),valid=rows.filter((_,i)=>!dups.has(i));
-  filtered+=dups.size;total+=valid.length;all[key]=valid.map(x=>({row:x.row,v:x.v}));
+  rawTotal+=rows.length;filtered+=dups.size;total+=valid.length;all[key]=valid.map(x=>({row:x.row,v:x.v}));
  }
- if(!total){$('pasteErr').textContent='Dán dữ liệu vào ít nhất một mục trước khi kiểm tra.';return}
+ if(!rawTotal){$('pasteErr').textContent='Bạn chưa dán dữ liệu vào mục nào. Hãy chọn mục rồi dán dữ liệu trước khi kiểm tra.';return}
+ if(!total){$('pasteErr').textContent='Đã dán '+rawTotal+' dòng, nhưng cả '+filtered+' dòng đều bị loại vì mã nhân viên hoặc lượt nghỉ bị trùng với dữ liệu đã có / trong vùng dán. Không còn dòng mới để kiểm tra. Nếu cần sửa nhân viên đã có, vào tab DS nhân viên.';return}
  IMP={file:'Dán dữ liệu nhân sự',adds:all.adds,res:all.res,leaves:all.leaves,filteredDuplicates:filtered};
  try{
   const r=await HRCloud.api('/api/import/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(IMP)});
