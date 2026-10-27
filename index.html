@@ -360,13 +360,13 @@ function exportTabXlsx(){
  const act=emps(),res=resigned(),allL=leaves();
  let label=TABS[tab]||'Du_lieu';
  if(tab===0){
-  const visible=act.filter(e=>sf(e[3])),todayL=allL.filter(x=>x[7]===st.day);
+  const visible=act.filter(e=>sf(e[3])),todayL=allL.filter(x=>x[7]===st.day&&sf(x[3]));
   const from=new Date(st.day+'T00:00:00Z');from.setUTCDate(from.getUTCDate()-13);const start=from.toISOString().slice(0,10);
   sheet('Tong hop',['Chỉ tiêu','Số lượng'],[['Nhân viên đang làm theo ca chọn',visible.length],['Nghỉ ngày '+st.day,todayL.length],['Phép năm ngày quy đổi',todayL.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)]]);
   sheet('Nhan vien dang lam',eh,empRows(visible));
   sheet('Nghi ngay '+st.day,lh,leaveRows(todayL));
   sheet('Vao moi 14 ngay',eh.slice(0,7),act.filter(e=>e[2]>=start&&e[2]<=st.day).map(e=>e.slice(0,7)));
-  sheet('Nghi viec 14 ngay',rh.filter((_,i)=>i!==3),res.filter(e=>e[7]>=start&&e[7]<=st.day).map(e=>[e[0],e[1],e[2],e[4],e[5],e[6],e[3],e[7],e[8]]));
+  sheet('Nghi viec 14 ngay',rh,res.filter(e=>e[7]>=start&&e[7]<=st.day&&sf(e[3])).map(e=>[e[0],e[1],e[2],e[4],e[5],e[6],e[3],e[7],e[8]]));
  }else if(tab===1){
   const q=nz(st.eq||''),a=act.slice().sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi')).filter(e=>!q||nz(e.join(' ')).includes(q));
   sheet('DS nhan vien',eh,empRows(a));
