@@ -78,7 +78,7 @@ async function validateImport(body: any) {
   const vendors = new Set(employees.map((e: any) => e.vendor).filter(Boolean));
   const leaveKeys = new Set(leaveRows.map((l: any) => `${l.emp_id}|${l.date}`));
   const R: any = Object.fromEntries(["adds", "res", "leaves"].map(k => [k, { total: 0, rows: [], errors: [], warnings: [], skipped: 0 }]));
-  const SHIFTS = ["A", "C", "HC"], TYPES = ["Chính thức", "Thời vụ", "Sinh viên"], CODES = ["P", "TD", "R", "RCC", "O", "Stop", "ĐM"];
+  const SHIFTS = ["A", "C", "HC"], TYPES = ["Chính thức", "Thời vụ", "Sinh viên"], CODES = ["P", "P/2", "TD", "R", "RCC", "O", "Stop", "ĐM"];
   const today = new Date().toISOString().slice(0, 10), in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const err = (k: string, row: number, msg: string) => R[k].errors.push({ row, msg });
   const warn = (k: string, row: number, msg: string) => R[k].warnings.push({ row, msg });
@@ -165,7 +165,7 @@ Deno.serve(async req => {
     if (method === "POST" && route === "/api/leaves/update") {
       requireRole(user, ["admin", "editor"]); const b = await req.json();
       const id=String(b.id||"").trim(), oldDate=dateValue(b.oldDate), date=dateValue(b.date);
-      const code=["P","TD","R","RCC","O","Stop","ĐM"].find(x=>norm(x)===norm(b.code));
+      const code=["P","P/2","TD","R","RCC","O","Stop","ĐM"].find(x=>norm(x)===norm(b.code));
       if(!id||!oldDate||!date||!code) return fail("Mã nhân viên, ngày nghỉ hoặc loại nghỉ không hợp lệ",400,origin);
       const {data:existing,error:lookupError}=await admin.from("leaves").select("emp_id").eq("emp_id",id).eq("date",oldDate).maybeSingle();
       if(lookupError) throw lookupError; if(!existing) return fail("Không tìm thấy lượt nghỉ cần sửa",404,origin);
