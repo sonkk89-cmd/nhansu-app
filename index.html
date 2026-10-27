@@ -348,6 +348,61 @@ async function commitImport(){const bt=document.querySelector('#modal .b');if(bt
   tbl(['Số liệu trong hệ thống','Trước → Sau'],[['Nhân viên đang làm',df(b.active,a.active)],['Người đã nghỉ việc',df(b.resigned,a.resigned)],['Lượt nghỉ hằng ngày',df(b.leaves,a.leaves)]])+
   `<p class="note">Số liệu này do máy chủ đếm lại sau khi ghi, bạn đối chiếu với số dòng trong file. Lịch sử nhập xem ở tab Quản trị.</p><div class="tb"><button class="b" onclick="closeM()">Đóng</button></div></div></div>`;
   await load()}catch(e){$('modal').innerHTML=`<div class="mo"><div><h3 style="color:var(--er)">✖ Không kết nối được máy chủ</h3><p>Chưa biết dữ liệu đã được ghi hay chưa. Mở lại trang, xem số nhân viên rồi nhập lại nếu cần (hệ thống tự bỏ qua dòng đã có).</p><div class="tb"><button class="b g" onclick="closeM()">Đóng</button></div></div></div>`}}
+
+function exportTabXlsx(){
+ const wb=XLSX.utils.book_new(),sheet=(name,head,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([head,...rows]),name);
+ const empRows=a=>a.map(e=>[e[0],e[1],e[2],e[3],e[4],e[5],e[6],e[7],e[8],e[9]]);
+ const resignRows=a=>a.map(e=>[e[0],e[1],e[2],e[4],e[5],e[6],e[3],e[7],e[8]]);
+ const leaveRows=a=>a.map(x=>[x[0],x[1],x[2],x[3],x[4],CODE[x[5]]||x[5],x[6],x[7]]);
+ const eh=['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Quản lý','Giới tính'];
+ const rh=['Mã NV','Họ tên','Ngày vào','Loại nhân lực','Vendor','Line','Ca','Ngày nghỉ','Lý do'];
+ const lh=['Mã NV','Họ tên','Line','Ca','Loại nhân lực','Loại nghỉ','Lý do','Ngày'];
+ const act=emps(),res=resigned(),allL=leaves();
+ let label=TABS[tab]||'Du_lieu';
+ if(tab===0){
+  const visible=act.filter(e=>sf(e[3])),todayL=allL.filter(x=>x[7]===st.day);
+  const from=new Date(st.day+'T00:00:00Z');from.setUTCDate(from.getUTCDate()-13);const start=from.toISOString().slice(0,10);
+  sheet('Tong hop',['Chỉ tiêu','Số lượng'],[['Nhân viên đang làm theo ca chọn',visible.length],['Nghỉ ngày '+st.day,todayL.length],['Phép năm ngày quy đổi',todayL.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)]]);
+  sheet('Nhan vien dang lam',eh,empRows(visible));
+  sheet('Nghi ngay '+st.day,lh,leaveRows(todayL));
+  sheet('Vao moi 14 ngay',eh.slice(0,7),act.filter(e=>e[2]>=start&&e[2]<=st.day).map(e=>e.slice(0,7)));
+  sheet('Nghi viec 14 ngay',rh.filter((_,i)=>i!==3),res.filter(e=>e[7]>=start&&e[7]<=st.day).map(e=>[e[0],e[1],e[2],e[4],e[5],e[6],e[3],e[7],e[8]]));
+ }else if(tab===1){
+  const q=nz(st.eq||''),a=act.slice().sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi')).filter(e=>!q||nz(e.join(' ')).includes(q));
+  sheet('DS nhan vien',eh,empRows(a));
+ }else if(tab===2){
+  const a=act.filter(e=>e[6]===st.line&&sf(e[3])&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));
+  sheet('Theo line',eh,empRows(a));label='Theo_line';
+ }else if(tab===3){
+  const lk=e=>e[8]||'(trống)',a=act.filter(e=>lk(e)===st.ld&&sf(e[3])&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));
+  sheet('Theo Leader',eh,empRows(a));label='Theo_Leader';
+ }else if(tab===4){
+  const a=act.filter(e=>sf(e[3])&&e[4]===st.type&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));
+  sheet('Theo loai',eh,empRows(a));label='Theo_loai';
+ }else if(tab===5){
+  let a=allL.filter(x=>sf(x[3]));
+  if(st.mode==='day')a=a.filter(x=>x[7]===st.day);
+  else if(st.mode==='mon')a=a.filter(x=>x[7].startsWith(st.mon));
+  else if(st.mode==='yr')a=a.filter(x=>x[7].startsWith(st.yr));
+  sheet('Nghi hang ngay',lh,leaveRows(a));label='Nghi_hang_ngay';
+ }else if(tab===6){
+  let a=res.filter(x=>sf(x[3]));
+  a=a.filter(x=>(!st.rm||(x[7]||'').startsWith(st.rm))&&(!st.rt||x[4]===st.rt)&&(!st.rq||nz(x.join(' ')).includes(nz(st.rq))));
+  sheet('Nghi viec',rh,resignRows(a));label='Nghi_viec';
+ }else if(tab===7){
+  sheet('Nhan vien dang lam',eh,empRows(act.filter(e=>sf(e[3]))));
+  sheet('Nhan vien nghi viec',rh,resignRows(res.filter(e=>sf(e[3]))));
+  sheet('Nghi hang ngay',lh,leaveRows(allL.filter(x=>sf(x[3]))));label='Them_Nghi_viec';
+ }else if(tab===8){
+  sheet('Tai khoan',['Tên đăng nhập','Tên hiển thị','Vai trò'],(st.users||[]).map(u=>[u.username,u.name,ROLEL[u.role]||u.role]));
+  sheet('Kiem tra',['Hạng mục','Số lượng','Ví dụ'],((st.checks||{}).items||[]).map(i=>[i.label,i.count,(i.sample||[]).join(' · ')]));
+  sheet('Lich su nhap',['Thời gian','Người nhập','File','Nhân viên mới','Nghỉ việc','Nghỉ ngày','Lỗi bỏ qua'],(st.imps||[]).map(i=>[i.at,i.user,i.file,i.summary?.ok?.adds||0,i.summary?.ok?.res||0,i.summary?.ok?.leaves||0,i.summary?.errors||0]));
+  sheet('Nhat ky',['Thời gian','Người thực hiện','Thao tác','Chi tiết'],(st.audit||[]).map(i=>[i.at,i.user,ACTL[i.action]||i.action,i.detail]));label='Quan_tri';
+ }
+ const date=new Date().toISOString().slice(0,10);
+ XLSX.writeFile(wb,'bao_cao_'+label+'_'+date+'.xlsx');
+}
+
 async function exportXlsx(){const wb=XLSX.utils.book_new(),A=(h,r)=>XLSX.utils.aoa_to_sheet([h].concat(r));
  XLSX.utils.book_append_sheet(wb,A(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Giới tính'],emps()),'DS nhân viên');
  XLSX.utils.book_append_sheet(wb,A(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Vendor','Line','Ngày nghỉ','Lý do'],resigned().map(x=>x.slice(0,9))),'DS nghỉ việc');
@@ -382,7 +437,7 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
 async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}D=await r.json();if(Array.isArray(D.L))D.L=D.L.map(x=>{if(Array.isArray(x)&&x[7])x[7]=String(x[7]).slice(0,10);return x});$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){$('sub').textContent='Lỗi tải dữ liệu từ máy chủ: '+String(e?.message||e||'Lỗi không xác định')}}
 function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===8&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc · '+(D.L||[]).length+' lượt nghỉ đã tải';
- const keep=window.scrollY;$('app').innerHTML=[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
+ const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
 </script></body></html>
 
