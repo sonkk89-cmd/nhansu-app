@@ -38,6 +38,21 @@ async function currentUser(req: Request) {
 const requireRole = (u: { role: string }, roles: string[]) => {
   if (!roles.includes(u.role)) throw Object.assign(new Error("Bạn không có quyền thực hiện thao tác này"), { status: 403 });
 };
+async function fetchAllLeaves(columns = "*") {
+  const rows: any[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await admin.from("leaves").select(columns).order("id", { ascending: true }).range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows.sort((a: any, b: any) =>
+    String(a.date || "").localeCompare(String(b.date || "")) ||
+    String(a.emp_id || "").localeCompare(String(b.emp_id || "")) ||
+    Number(a.id || 0) - Number(b.id || 0)
+  );
+}
 async function audit(username: string, action: string, detail: string) {
   const { error } = await admin.from("audit").insert({ username, action, detail });
   if (error) throw error;
@@ -53,16 +68,15 @@ function dateValue(v: unknown) {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : "";
 }
 async function validateImport(body: any) {
-  const [er, lr] = await Promise.all([
+  const [er, leaveRows] = await Promise.all([
     admin.from("employees").select("*"),
-    admin.from("leaves").select("emp_id,date"),
+    fetchAllLeaves("emp_id,date"),
   ]);
   if (er.error) throw er.error;
-  if (lr.error) throw lr.error;
   const employees = er.data || [], existing = new Map(employees.map((e: any) => [e.id, e]));
   const lines = new Set(employees.map((e: any) => e.line).filter(Boolean));
   const vendors = new Set(employees.map((e: any) => e.vendor).filter(Boolean));
-  const leaveKeys = new Set((lr.data || []).map((l: any) => `${l.emp_id}|${l.date}`));
+  const leaveKeys = new Set(leaveRows.map((l: any) => `${l.emp_id}|${l.date}`));
   const R: any = Object.fromEntries(["adds", "res", "leaves"].map(k => [k, { total: 0, rows: [], errors: [], warnings: [], skipped: 0 }]));
   const SHIFTS = ["A", "C", "HC"], TYPES = ["Chính thức", "Thời vụ", "Sinh viên"], CODES = ["P", "TD", "R", "RCC", "O", "Stop", "ĐM"];
   const today = new Date().toISOString().slice(0, 10), in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
@@ -137,16 +151,16 @@ Deno.serve(async req => {
     }
     const user = await currentUser(req);
     if (method === "GET" && route === "/api/data") {
-      const [a, r, l] = await Promise.all([
+      const [a, r, leaveRows] = await Promise.all([
         admin.from("employees").select("*").eq("status", "active").order("id"),
         admin.from("employees").select("*").eq("status", "resigned").order("resign_date", { ascending: false }),
-        admin.from("leaves").select("*").order("date").order("emp_id"),
+        fetchAllLeaves("*"),
       ]);
-      if (a.error || r.error || l.error) throw a.error || r.error || l.error;
+      if (a.error || r.error) throw a.error || r.error;
       const rowE = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.title,e.manager,e.gender];
       const rowR = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.resign_date,e.resign_reason,1];
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
-      return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: (l.data||[]).map(rowL) }, 200, origin);
+      return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: leaveRows.map(rowL) }, 200, origin);
     }
     if (method === "POST" && route === "/api/leaves/update") {
       requireRole(user, ["admin", "editor"]); const b = await req.json();
@@ -250,8 +264,8 @@ Deno.serve(async req => {
     if (route === "/api/checks" && method === "GET") {
       requireRole(user,["admin"]);
       const {data:emps,error}=await admin.from("employees").select("*"); if(error)throw error;
-      const {data:leaves,error:le}=await admin.from("leaves").select("*"); if(le)throw le;
-      const E=emps||[],L=leaves||[], active=E.filter((e:any)=>e.status==="active"), resigned=E.filter((e:any)=>e.status==="resigned"), by=(label:string,rows:any[])=>({label,count:rows.length,sample:rows.slice(0,8).map((r:any)=>`${r.id||r.emp_id} ${r.name||r.date}`)});
+      const leaves=await fetchAllLeaves("*");
+      const E=emps||[],L=leaves, active=E.filter((e:any)=>e.status==="active"), resigned=E.filter((e:any)=>e.status==="resigned"), by=(label:string,rows:any[])=>({label,count:rows.length,sample:rows.slice(0,8).map((r:any)=>`${r.id||r.emp_id} ${r.name||r.date}`)});
       const items=[by("Đang làm: chưa có Line",active.filter((e:any)=>!e.line)),by("Đang làm: chưa có tên quản lý (Leader)",active.filter((e:any)=>!e.manager)),by("Đang làm: chưa có giới tính",active.filter((e:any)=>!e.gender)),by("Đang làm: Ca không hợp lệ",active.filter((e:any)=>!["A","C","HC"].includes(e.shift))),by("Đang làm: Loại nhân lực không hợp lệ",active.filter((e:any)=>!["Chính thức","Thời vụ","Sinh viên"].includes(e.type))),by("Đang làm: Thời vụ chưa ghi Vendor",active.filter((e:any)=>e.type==="Thời vụ"&&!e.vendor)),by("Đã nghỉ việc nhưng thiếu ngày nghỉ",resigned.filter((e:any)=>!e.resign_date)),by("Ngày nghỉ trước ngày vào làm",L.filter((l:any)=>{const e=E.find((x:any)=>x.id===l.emp_id);return e?.joined&&l.date<e.joined;}))];
       return reply({at:new Date().toISOString(),counts:{active:active.length,resigned:resigned.length,leaves:L.length},items},200,origin);
     }
