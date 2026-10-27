@@ -379,7 +379,7 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
   if(!r.ok)err=(await r.json()).error||'Lỗi lưu dữ liệu'}catch(e){err='Không kết nối được máy chủ'}
  if(err){const dup=/duplicate key|employees_pkey|employees_id_key/i.test(err),message=dup?'Mã NV đã tồn tại trong dữ liệu. Hãy kiểm tra mã nhân viên rồi thử lại.':'THẤT BẠI, chưa lưu: '+err;st.msg='!'+message;alert(message);await load();return}
  S={adds:[],res:{},leaves:[]};st.msg=ok||'Đã lưu vào máy chủ';await load()}
-async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}D=await r.json();$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){}}
+async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}D=await r.json();if(Array.isArray(D.L))D.L=D.L.map(x=>{if(Array.isArray(x)&&x[7])x[7]=String(x[7]).slice(0,10);return x});$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){}}
 function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===8&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc';
  const keep=window.scrollY;$('app').innerHTML=[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
