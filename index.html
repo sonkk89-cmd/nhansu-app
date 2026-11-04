@@ -498,4 +498,4 @@ function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab==
  const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
 </script></body></html>
-
+<!-- GitHub Pages redeploy trigger: overview UI update -->
