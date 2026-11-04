@@ -150,6 +150,22 @@ Deno.serve(async req => {
       return reply({ ok: true, token: data.session.access_token, user: profile }, 200, origin);
     }
     const user = await currentUser(req);
+    if (method === "GET" && route === "/api/database-usage") {
+      requireRole(user, ["admin"]);
+      const { data, error } = await admin.rpc("hr_database_usage");
+      if (error) throw error;
+      const usedBytes = Number(data || 0);
+      const limitBytes = 500 * 1024 * 1024;
+      return reply({
+        usedBytes,
+        limitBytes,
+        remainingBytes: Math.max(0, limitBytes - usedBytes),
+        usagePercent: Math.round((usedBytes / limitBytes) * 1000) / 10,
+        plan: "Free",
+        metric: "database",
+        measuredAt: new Date().toISOString()
+      }, 200, origin);
+    }
     if (method === "GET" && route === "/api/data") {
       const [a, r, leaveRows] = await Promise.all([
         admin.from("employees").select("*").eq("status", "active").order("id"),
