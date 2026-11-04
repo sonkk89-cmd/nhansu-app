@@ -64,7 +64,7 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 #app.overview .dash-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
 #app.overview .dash-present{background:#23866a}#app.overview .dash-absent{background:#e0a13b}
 #app.overview .dash-line-row{display:grid;grid-template-columns:minmax(76px,112px) minmax(70px,1fr) 48px 38px;gap:8px;align-items:center;margin:9px 0;font-size:11px}
-#app.overview .dash-link{border:0;background:none;color:var(--pr);padding:0;text-align:left;font:600 11px inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app.overview .dash-link{border:0;background:none;color:var(--pr);padding:0;text-align:left;font:inherit;font-size:11px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #app.overview .dash-track{height:9px;border-radius:8px;background:#edf1f6;overflow:hidden;display:flex;min-width:0}
 #app.overview .dash-track i{display:block;height:100%;min-width:0;border-radius:0}
 #app.overview .dash-line-row>b,.dash-vendor-row>b{text-align:right;font-variant-numeric:tabular-nums}
@@ -157,7 +157,7 @@ function vOverview(){
  const roster=all.filter(e=>(!e[2]||e[2]<=day)&&(!e[7]||e[7]>=day)&&st.sh.includes(e[3]));
  const present=roster.filter(e=>!absIds.has(e[0])),absent=roster.length-present.length;
  const pct=roster.length?(present.length/roster.length*100).toFixed(1):'0.0';
- const resignedToday=all.filter(e=>e[7]===day).length;
+ const resignedToday=resigned().filter(e=>e[7]===day).length;
  const d7=new Date(day+'T00:00:00');d7.setDate(d7.getDate()-6);const from7=d7.toISOString().slice(0,10);
  const new7=all.filter(e=>e[2]&&e[2]>=from7&&e[2]<=day).length;
  const quit7=all.filter(e=>e[7]&&e[7]>=from7&&e[7]<=day).length;
