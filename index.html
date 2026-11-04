@@ -104,6 +104,7 @@ function vOverview(){const all=emps(),a=all.filter(e=>st.sh.includes(e[3]));cons
  ${vOverviewLineDetail()}
  ${vNew()}<p class="note">Dữ liệu gốc: ${D.E.length} nhân viên từ file DS tổng, đã cộng/trừ các thay đổi thực hiện trên trang này.</p>`}
 function selectOverviewLine(k){st.ovLine=k;st.ovLineQ='';render()}
+function goLine(k){st.line=k;tab=1;render()}
 function closeOverviewLine(){st.ovLine='';st.ovLineQ='';render()}
 function vOverviewLineDetail(){
  if(!st.ovLine)return '';
