@@ -409,7 +409,7 @@ async function exportXlsx(){const wb=XLSX.utils.book_new(),A=(h,r)=>XLSX.utils.a
  XLSX.utils.book_append_sheet(wb,A(['Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do','Ngày'],leaves().map(x=>x.slice(0,8))),'Nghỉ hằng ngày');
  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
  XLSX.writeFile(wb,'bao_cao_nhan_su.xlsx')}
-const ROLEL={admin:'Quản trị (toàn quyền)',editor:'Nhập liệu',viewer:'Chỉ xem'},ACTL={employee_edit:'Sửa thông tin nhân viên',add_employee:'Thêm nhân viên',resign:'Nghỉ việc',restore:'Khôi phục',leave:'Ghi nghỉ',delete_leave:'Xóa nghỉ',user_save:'Lưu tài khoản',user_delete:'Xóa tài khoản',import:'Nhập từ Excel'};
+const ROLEL={admin:'Quản trị (toàn quyền)',editor:'Nhập liệu',viewer:'Chỉ xem'},ACTL={employee_edit:'Sửa thông tin nhân viên',add_employee:'Thêm nhân viên',resign:'Nghỉ việc',restore:'Khôi phục',leave:'Ghi nghỉ',delete_leave:'Xóa nghỉ',user_save:'Lưu tài khoản',user_delete:'Xóa tài khoản',import:'Nhập từ Excel',system_reset:'Xây lại dữ liệu nhân sự'};
 async function loadAdmin(){try{const [u,a,c,im]=await Promise.all([HRCloud.api('/api/users'),HRCloud.api('/api/audit'),HRCloud.api('/api/checks'),HRCloud.api('/api/imports')]);if(u.ok)st.users=await u.json();if(a.ok)st.audit=await a.json();if(c.ok)st.checks=await c.json();if(im.ok)st.imps=await im.json();render()}catch(e){}}
 async function saveUser(){const b={username:$('aU').value.trim(),name:$('aN').value.trim(),role:$('aR').value,password:$('aP').value};
  const r=await HRCloud.api('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}),j=await r.json();
@@ -417,11 +417,29 @@ async function saveUser(){const b={username:$('aU').value.trim(),name:$('aN').va
 async function delUser(u){if(!confirm('Xóa tài khoản '+u+'?'))return;const r=await HRCloud.api('/api/users/'+encodeURIComponent(u),{method:'DELETE'}),j=await r.json();
  st.msg=r.ok?'Đã xóa tài khoản '+u:'!'+(j.error||'Lỗi');await loadAdmin()}
 function editUser(u){const x=(st.users||[]).find(y=>y.username===u);if(!x)return;$('aU').value=x.username;$('aN').value=x.name;$('aR').value=x.role;$('aP').value='';$('aP').focus()}
+function openResetData(){
+ $('modal').innerHTML='<div class="mo"><div style="max-width:580px"><h3 style="color:var(--er)">Xây lại dữ liệu nhân sự</h3><p>Thao tác này xóa toàn bộ <b>nhân viên, nhân viên đã nghỉ, lượt nghỉ hằng ngày và lịch sử nhập Excel</b>. Tài khoản đăng nhập và nhật ký thao tác vẫn được giữ.</p><p class="note">Hãy xuất file Excel trước để có bản lưu ngoài hệ thống. Sau khi xóa, bạn có thể nhập danh sách nhân sự mới.</p><div class="tb"><button class="b g" onclick="exportXlsx()">Xuất bản sao lưu Excel</button></div><div style="margin-top:14px"><label>Gõ chính xác: <b>XÂY LẠI DỮ LIỆU</b></label><input id="resetPhrase" autocomplete="off" style="width:100%;margin-top:5px"></div><div class="tb" style="margin-top:14px"><button class="r" onclick="resetSystemData()">Xóa toàn bộ dữ liệu nhân sự</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
+}
+async function resetSystemData(){
+ const confirmation=($('resetPhrase')?.value||'').trim();
+ if(confirmation!=='XÂY LẠI DỮ LIỆU'){alert('Bạn cần gõ đúng: XÂY LẠI DỮ LIỆU');return}
+ if(!confirm('Xác nhận lần cuối: toàn bộ dữ liệu nhân sự và nghỉ sẽ bị xóa?'))return;
+ const button=document.querySelector('#modal .r');if(button){button.disabled=true;button.textContent='Đang xóa dữ liệu…'}
+ try{
+  const r=await HRCloud.api('/api/system/reset-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation})}),j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Không thể xóa dữ liệu');
+  S={adds:[],res:{},leaves:[]};closeM();
+  st.msg='Đã xóa '+(j.removed?.employees||0)+' nhân viên và '+(j.removed?.leaves||0)+' lượt nghỉ. Bạn có thể nhập danh sách mới.';
+  await load();await loadAdmin();
+ }catch(e){alert('Chưa xóa dữ liệu: '+String(e?.message||e))}
+}
+
 function vAdmin(){const us=st.users||[],au=(st.audit||[]).slice(0,200);
  return `<div class="card"><h3>Tạo mới / sửa tài khoản</h3><div class="f"><div><label>Tên đăng nhập</label><input id="aU" autocomplete="off"></div><div><label>Tên hiển thị</label><input id="aN"></div><div><label>Vai trò</label><select id="aR">${Object.entries(ROLEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div><label>Mật khẩu (từ 8 ký tự; để trống nếu chỉ sửa tên/vai trò)</label><input id="aP" type="password" autocomplete="new-password"></div></div>
  <div class="tb" style="margin-top:10px"><button class="b" onclick="saveUser()">Lưu tài khoản</button><span class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div>
  <p class="note">Gõ tên đăng nhập đã có rồi lưu để đổi mật khẩu hoặc vai trò. Người bị đổi quyền hoặc đổi mật khẩu sẽ phải đăng nhập lại. Luôn giữ ít nhất một tài khoản admin.</p></div>`+
  tbl(['Tên đăng nhập','Tên hiển thị','Vai trò',''],us.map(u=>[esc(u.username),esc(u.name),esc(ROLEL[u.role]||u.role),`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editUser('${esc(u.username)}')">Sửa</button> `+(u.username===D.me.username?'':`<button class="r" onclick="delUser('${esc(u.username)}')">Xóa</button>`)]))+
+ ``<div class="card" style="margin-top:16px;border-color:var(--er)"><h3>Xây lại dữ liệu nhân sự</h3><p class="note">Dùng khi cần xóa danh sách cũ và nhập lại từ đầu. Chỉ tài khoản quản trị được thao tác.</p><button class="r" onclick="openResetData()">Xây lại dữ liệu</button></div>`+
  `<h3 style="margin:16px 0 8px">Kiểm tra chất lượng dữ liệu</h3><div class="tb"><button class="b g" onclick="loadAdmin()">Kiểm tra lại</button><span class="note">${st.checks?`Trong hệ thống: ${st.checks.counts.active} đang làm · ${st.checks.counts.resigned} đã nghỉ việc · ${st.checks.counts.leaves} lượt nghỉ (lúc ${new Date(st.checks.at).toLocaleTimeString('vi-VN')})`:''}</span></div>`+
  tbl(['Kiểm tra','Số lượng','Ví dụ (tối đa 8)'],((st.checks||{}).items||[]).map(i=>[esc(i.label),i.count?`<b style="color:var(--wr)">${i.count}</b>`:'<span style="color:var(--ok)">✔ 0</span>',esc(i.sample.join(' · '))]))+
  `<h3 style="margin:16px 0 8px">Lịch sử nhập từ Excel</h3>`+
