@@ -143,8 +143,38 @@ function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x
 function vEmployees(){
  const all=emps().slice().sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
  const q=nz(st.eq||''),a=q?all.filter(e=>nz(e.join(' ')).includes(q)):all,canEdit=['admin','editor'].includes(D.me.role);
- return `<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span></div></div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>`]:[])]));
+ return `<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
+ tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
+}
+
+function openDeleteAllEmployees(){
+ if(D.me.role!=='admin')return;
+ const total=emps().length+resigned().length,leaveTotal=(D.L||[]).length;
+ $('modal').innerHTML=`<div class="mo"><div style="max-width:600px"><h3 style="color:var(--er)">Xóa toàn bộ nhân viên</h3><p>Thao tác này xóa vĩnh viễn <b>${total} hồ sơ nhân viên</b> (đang làm và đã nghỉ) cùng <b>${leaveTotal} lượt nghỉ</b> liên quan.</p><p class="note">Tài khoản đăng nhập, nhật ký thao tác và lịch sử nhập Excel được giữ nguyên. Hãy xuất Excel sao lưu trước khi tiếp tục. Không thể hoàn tác thao tác này.</p><div class="tb"><button class="b g" onclick="exportXlsx()">Xuất bản sao lưu Excel</button></div><div style="margin-top:14px"><label>Gõ chính xác: <b>XÓA TOÀN BỘ NHÂN VIÊN</b></label><input id="deleteAllPhrase" autocomplete="off" style="width:100%;margin-top:5px"></div><div class="tb" style="margin-top:14px"><button class="r" onclick="deleteAllEmployees()">Xóa toàn bộ nhân viên</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
+}
+async function deleteEmployee(id){
+ if(D.me.role!=='admin')return;
+ const e=emps().find(x=>x[0]===id);if(!e)return;
+ const leaveCount=(D.L||[]).filter(x=>x[0]===id).length;
+ if(!confirm(`Xóa vĩnh viễn nhân viên ${e[1]} (${id})? ${leaveCount} lượt nghỉ liên quan cũng sẽ bị xóa. Thao tác không thể hoàn tác.`))return;
+ try{
+  const r=await HRCloud.api('/api/employees/'+encodeURIComponent(id),{method:'DELETE'}),j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Không thể xóa nhân viên');
+  st.msg='Đã xóa nhân viên '+id+' và '+(j.removed?.leaves||0)+' lượt nghỉ liên quan.';await load();
+ }catch(e){alert('Chưa xóa được nhân viên: '+String(e?.message||e))}
+}
+async function deleteAllEmployees(){
+ if(D.me.role!=='admin')return;
+ if(($('deleteAllPhrase')?.value||'').trim()!=='XÓA TOÀN BỘ NHÂN VIÊN'){alert('Bạn cần gõ đúng: XÓA TOÀN BỘ NHÂN VIÊN');return}
+ if(!confirm('Xác nhận lần cuối: xóa toàn bộ nhân viên đang làm, đã nghỉ và mọi lượt nghỉ liên quan?'))return;
+ const button=document.querySelector('#modal .r');if(button){button.disabled=true;button.textContent='Đang xóa…'}
+ try{
+  const r=await HRCloud.api('/api/employees',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation:'XÓA TOÀN BỘ NHÂN VIÊN'})}),j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Không thể xóa toàn bộ nhân viên');
+  S={adds:[],res:{},leaves:[]};closeM();
+  st.msg='Đã xóa '+(j.removed?.employees||0)+' hồ sơ nhân viên và '+(j.removed?.leaves||0)+' lượt nghỉ. Tài khoản, nhật ký và lịch sử nhập Excel vẫn được giữ.';
+  await load();
+ }catch(e){alert('Chưa xóa dữ liệu: '+String(e?.message||e));const b=document.querySelector('#modal .r');if(b){b.disabled=false;b.textContent='Xóa toàn bộ nhân viên'}}
 }
 function editEmployee(id){
  if(!['admin','editor'].includes(D.me.role))return;
@@ -409,7 +439,7 @@ async function exportXlsx(){const wb=XLSX.utils.book_new(),A=(h,r)=>XLSX.utils.a
  XLSX.utils.book_append_sheet(wb,A(['Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do','Ngày'],leaves().map(x=>x.slice(0,8))),'Nghỉ hằng ngày');
  const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
  XLSX.writeFile(wb,'bao_cao_nhan_su.xlsx')}
-const ROLEL={admin:'Quản trị (toàn quyền)',editor:'Nhập liệu',viewer:'Chỉ xem'},ACTL={employee_edit:'Sửa thông tin nhân viên',add_employee:'Thêm nhân viên',resign:'Nghỉ việc',restore:'Khôi phục',leave:'Ghi nghỉ',delete_leave:'Xóa nghỉ',user_save:'Lưu tài khoản',user_delete:'Xóa tài khoản',import:'Nhập từ Excel',system_reset:'Xây lại dữ liệu nhân sự'};
+const ROLEL={admin:'Quản trị (toàn quyền)',editor:'Nhập liệu',viewer:'Chỉ xem'},ACTL={employee_edit:'Sửa thông tin nhân viên',employee_delete:'Xóa nhân viên',employee_delete_all:'Xóa toàn bộ nhân viên',add_employee:'Thêm nhân viên',resign:'Nghỉ việc',restore:'Khôi phục',leave:'Ghi nghỉ',delete_leave:'Xóa nghỉ',user_save:'Lưu tài khoản',user_delete:'Xóa tài khoản',import:'Nhập từ Excel',system_reset:'Xây lại dữ liệu nhân sự'};
 async function loadAdmin(){try{const [u,a,c,im]=await Promise.all([HRCloud.api('/api/users'),HRCloud.api('/api/audit'),HRCloud.api('/api/checks'),HRCloud.api('/api/imports')]);if(u.ok)st.users=await u.json();if(a.ok)st.audit=await a.json();if(c.ok)st.checks=await c.json();if(im.ok)st.imps=await im.json();render()}catch(e){}}
 async function saveUser(){const b={username:$('aU').value.trim(),name:$('aN').value.trim(),role:$('aR').value,password:$('aP').value};
  const r=await HRCloud.api('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}),j=await r.json();
