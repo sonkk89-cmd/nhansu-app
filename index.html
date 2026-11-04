@@ -30,6 +30,63 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 #app.overview .cols>.card{min-width:0}
 #app.overview .overview-line-card{width:100%}
 #app.overview .overview-line-chart-bars{height:130px!important}
+
+/* HR Dashboard refresh – presentation only; existing data and API remain unchanged */
+#app.overview{max-width:1280px}
+#app.overview .dash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:2px 0 14px}
+#app.overview .dash-eyebrow{font-size:10px;letter-spacing:.14em;font-weight:800;color:var(--pr);margin-bottom:4px}
+#app.overview .dash-head h2{font-size:23px;line-height:1.2;margin:0;color:var(--tx)}
+#app.overview .dash-head p,.dash-panel-head p{font-size:12px;color:var(--mu);margin:4px 0 0}
+#app.overview .dash-date{display:flex;flex-direction:column;gap:4px;min-width:160px}
+#app.overview .dash-date label{font-size:11px;color:var(--mu);font-weight:700}
+#app.overview .dash-date input{font-weight:700}
+#app.overview .dash-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+#app.overview .dash-shift-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#app.overview .dash-shift-filter label{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer}
+#app.overview .dash-shift-filter input{accent-color:var(--pr)}
+#app.overview .dash-filter-note{font-size:11px;color:var(--mu)}
+#app.overview .dash-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#app.overview .dash-kpi{position:relative;overflow:hidden;min-width:0;background:#fff;border:1px solid var(--bd);border-radius:11px;padding:13px 14px;box-shadow:0 2px 8px rgba(20,32,46,.035)}
+#app.overview .dash-kpi:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--pr)}
+#app.overview .dash-kpi-label{font-size:11px;color:var(--mu);font-weight:700;padding-right:22px}
+#app.overview .dash-kpi-value{font-size:27px;line-height:1.2;font-weight:800;color:var(--tx);margin:7px 0 5px;font-variant-numeric:tabular-nums}
+#app.overview .dash-kpi-value.good{color:var(--ok)}#app.overview .dash-kpi-value.warn{color:var(--wr)}#app.overview .dash-kpi-value.danger{color:var(--er)}
+#app.overview .dash-kpi-foot{font-size:10px;color:var(--mu);line-height:1.4;min-height:28px}
+#app.overview .dash-kpi-icon{position:absolute;right:12px;top:11px;font-size:17px;color:#8ba4c7}
+#app.overview .dash-main-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin-bottom:12px}
+#app.overview .dash-panel{min-width:0;margin:0;padding:15px}
+#app.overview .dash-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+#app.overview .dash-panel-head h3{margin:0;font-size:13px}
+#app.overview .dash-panel-head p{font-size:11px}
+#app.overview .dash-mini-total{font-size:11px;color:var(--pr);background:var(--pl);padding:4px 8px;border-radius:20px;white-space:nowrap;font-weight:700}
+#app.overview .dash-legend{display:flex;gap:14px;margin:-2px 0 10px;font-size:10px;color:var(--mu)}
+#app.overview .dash-legend span{display:flex;align-items:center;gap:5px}
+#app.overview .dash-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+#app.overview .dash-present{background:#23866a}#app.overview .dash-absent{background:#e0a13b}
+#app.overview .dash-line-row{display:grid;grid-template-columns:minmax(76px,112px) minmax(70px,1fr) 48px 38px;gap:8px;align-items:center;margin:9px 0;font-size:11px}
+#app.overview .dash-link{border:0;background:none;color:var(--pr);padding:0;text-align:left;font:600 11px inherit;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app.overview .dash-track{height:9px;border-radius:8px;background:#edf1f6;overflow:hidden;display:flex;min-width:0}
+#app.overview .dash-track i{display:block;height:100%;min-width:0;border-radius:0}
+#app.overview .dash-line-row>b,.dash-vendor-row>b{text-align:right;font-variant-numeric:tabular-nums}
+#app.overview .dash-line-row>span{text-align:right;color:var(--mu);font-size:10px}
+#app.overview .dash-type-row,.dash-quality-row,.dash-shift-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #edf1f6;font-size:11px}
+#app.overview .dash-type-row:last-child,.dash-quality-row:last-child,.dash-shift-row:last-child{border-bottom:0}
+#app.overview .dash-type-row span,.dash-quality-row span,.dash-shift-row span{color:var(--mu)}
+#app.overview .dash-type-row i{font-style:normal;font-weight:700;color:var(--tx);margin-left:auto}
+#app.overview .dash-type-row b,.dash-shift-row b{min-width:52px;text-align:right}
+#app.overview .dash-shift-row span:last-child{min-width:48px;text-align:right;font-weight:700;color:var(--tx)}
+#app.overview .dash-vendor-row{display:grid;grid-template-columns:minmax(90px,150px) minmax(70px,1fr) 32px;gap:9px;align-items:center;margin:10px 0;font-size:11px}
+#app.overview .dash-vendor-row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app.overview .dash-vendor-row .dash-track i{background:#4d7fcb}
+#app.overview .dash-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+#app.overview .dash-quality{font-size:10px;font-weight:700;border-radius:20px;padding:4px 8px;white-space:nowrap}
+#app.overview .dash-quality.ok{color:var(--ok);background:#e8f6f0}
+#app.overview .dash-quality.needs{color:var(--wr);background:#fff4df}
+#app.overview .dash-trend>.card{margin-bottom:12px}
+#app.overview .dash-source-note{margin-top:0}
+@media(max-width:900px){#app.overview .dash-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}#app.overview .dash-main-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){#app.overview .dash-head{align-items:flex-start;flex-direction:column}#app.overview .dash-head h2{font-size:20px}#app.overview .dash-date{width:100%}#app.overview .dash-toolbar{align-items:flex-start;flex-direction:column}#app.overview .dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#app.overview .dash-kpi{padding:11px}#app.overview .dash-kpi-value{font-size:23px}#app.overview .dash-main-grid,#app.overview .dash-bottom-grid{grid-template-columns:1fr}#app.overview .dash-line-row{grid-template-columns:80px minmax(50px,1fr) 38px 34px;gap:5px}#app.overview .dash-panel{padding:12px}}
+
 </style></head><body>
 <header class="topbar"><div class="topbar-in"><div class="brand-mark">Production - ILS</div><div class="head-copy"><h1>Báo cáo nhân sự – Bộ phận sản xuất</h1><div class="sub" id="sub"></div></div><div class="account"><span id="me"></span> · <a href="#" onclick="HRCloud.logout(event)">Đăng xuất</a></div></div></header>
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
@@ -95,13 +152,55 @@ function ovCtl(){return `<div class="tb"><span class="k">Ngày:</span><input typ
 function vstack(o){const m=Math.max(1,...Object.values(o).map(v=>v.w+v.a+v.r)),h=v=>`height:${v/m*80}px`;return `<div class="overview-line-chart-bars" style="display:flex;gap:6px;align-items:flex-end;height:130px;overflow-x:auto;padding-top:6px">${Object.entries(o).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`<div class="cl" title="${esc(k)}: đi làm ${v.w}, nghỉ ${v.a}, nghỉ việc ${v.r}" onclick="goLine('${esc(k)}')" style="flex:1;min-width:52px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><span style="font-size:11px;white-space:nowrap"><b style="color:${CL.w}">${v.w}</b>·<b style="color:${CL.a}">${v.a}</b>·<b style="color:${CL.r}">${v.r}</b></span><div style="width:68%;display:flex;flex-direction:column;margin-top:2px"><i style="${h(v.r)};background:${CL.r}"></i><i style="${h(v.a)};background:${CL.a}"></i><i style="${h(v.w)};background:${CL.w}"></i></div><span style="font-size:11px;color:var(--mu);margin-top:4px;text-align:center;line-height:1.2">${esc(k.replace('Line ',''))}</span></div>`).join('')}</div>`}
 function hstack(o){const T=v=>v.w+v.a+v.r,m=Math.max(1,...Object.values(o).map(T));return Object.entries(o).sort((a,b)=>T(b[1])-T(a[1])).map(([k,v])=>`<div class="bar" style="grid-template-columns:110px 1fr 92px"><span title="${esc(k)}">${esc(k)}</span><span class="t" style="display:flex;overflow:hidden">${['w','a','r'].map(c=>`<i style="width:${v[c]/m*100}%;min-width:0;border-radius:0;background:${CL[c]}"></i>`).join('')}</span><b style="font-size:12px"><span style="color:${CL.w}">${v.w}</span>·<span style="color:${CL.a}">${v.a}</span>·<span style="color:${CL.r}">${v.r}</span></b></div>`).join('')||'<div class="note">Không có dữ liệu</div>'}
 function vbars(o){const m=Math.max(1,...Object.values(o));return `<div style="display:flex;gap:6px;align-items:flex-end;height:220px;overflow-x:auto;padding-top:6px">${Object.entries(o).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`<div class="cl" title="${esc(k)}" onclick="goLine('${esc(k)}')" style="flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><b style="font-size:12px">${v}</b><i style="display:block;width:68%;border-radius:4px 4px 0 0;background:var(--bar);min-height:2px;height:${v/m*150}px"></i><span style="font-size:11px;color:var(--mu);margin-top:4px;text-align:center;line-height:1.2">${esc(k.replace('Line ',''))}</span></div>`).join('')}</div>`}
-function vOverview(){const all=emps(),a=all.filter(e=>st.sh.includes(e[3]));const t=cnt(a,e=>e[4]);const tv=a.filter(e=>e[4]==='Thời vụ');
- const chk=`<div class="tb"><span class="k">Hiển thị ca:</span>${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>`<label class="card" style="margin:0;padding:7px 12px;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.sh.includes(k)?'checked':''} onchange="tg('${k}')">${l}</label>`).join('')}</div>`;
- const mx={};a.forEach(e=>{const k=(e[4]||'(trống)')+'|'+e[3];mx[k]=(mx[k]||0)+1});
- const types=[...new Set(a.map(e=>e[4]||'(trống)'))];
- return chk+ovCtl()+shiftKpi(a)+`<div class="cols"><div class="card"><h3>Ca làm việc × loại nhân lực</h3>${tbl(['Loại','Ca A','Ca C','HC','Tổng'],types.map(x=>[x,mx[x+'|A']||0,mx[x+'|C']||0,mx[x+'|HC']||0,t[x]||0]))}${ovAtt(a)}</div>
- <div class="card"><h3>Nhà thời vụ (vendor) hiện tại – ${tv.length} người</h3>${hstack(ovData(e=>e[5],e=>e[4]==='Thời vụ'))}</div></div><div class="card overview-line-card" style="margin-top:12px"><h3>Nhân lực theo line (bấm vào cột để xem danh sách)</h3>${vstack(ovData(e=>e[6]))}</div>
- ${vNew()}<p class="note">Dữ liệu gốc: ${D.E.length} nhân viên từ file DS tổng, đã cộng/trừ các thay đổi thực hiện trên trang này.</p>`}
+function vOverview(){
+ const day=st.day,all=emps().concat(resigned()),absIds=new Set(leaves().filter(x=>x[7]===day).map(x=>x[0]));
+ const roster=all.filter(e=>(!e[2]||e[2]<=day)&&(!e[7]||e[7]>=day)&&st.sh.includes(e[3]));
+ const present=roster.filter(e=>!absIds.has(e[0])),absent=roster.length-present.length;
+ const pct=roster.length?(present.length/roster.length*100).toFixed(1):'0.0';
+ const resignedToday=all.filter(e=>e[7]===day).length;
+ const d7=new Date(day+'T00:00:00');d7.setDate(d7.getDate()-6);const from7=d7.toISOString().slice(0,10);
+ const new7=all.filter(e=>e[2]&&e[2]>=from7&&e[2]<=day).length;
+ const quit7=all.filter(e=>e[7]&&e[7]>=from7&&e[7]<=day).length;
+ const types=Object.entries(cnt(roster,e=>e[4]||'(trống)')).sort((a,b)=>b[1]-a[1]);
+ const shifts=['A','C','HC'].filter(x=>st.sh.includes(x));
+ const byLine={};roster.forEach(e=>{const k=e[6]||'(chưa phân line)';byLine[k]||(byLine[k]={total:0,present:0,absent:0});byLine[k].total++;byLine[k][absIds.has(e[0])?'absent':'present']++});
+ const lineRows=Object.entries(byLine).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>\`<div class="dash-line-row"><button class="dash-link" onclick="goLine(\${JSON.stringify(k)})">\${esc(k)}</button><div class="dash-track"><i class="dash-present" style="width:\${v.present/Math.max(1,v.total)*100}%"></i><i class="dash-absent" style="width:\${v.absent/Math.max(1,v.total)*100}%"></i></div><b>\${v.present}/\${v.total}</b><span>\${v.total?(v.present/v.total*100).toFixed(0):0}%</span></div>\`).join('')||'<div class="note">Chưa có dữ liệu Line.</div>';
+ const tv=roster.filter(e=>e[4]==='Thời vụ'),vendors=Object.entries(cnt(tv,e=>e[5]||'(chưa có vendor)')).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ const vendorMax=Math.max(1,...vendors.map(x=>x[1]));
+ const vendorRows=vendors.map(([k,v])=>\`<div class="dash-vendor-row"><span title="\${esc(k)}">\${esc(k)}</span><div class="dash-track"><i style="width:\${v/vendorMax*100}%"></i></div><b>\${v}</b></div>\`).join('')||'<div class="note">Không có nhân lực thời vụ trong bộ lọc.</div>';
+ const shiftRows=shifts.map(s=>{const rows=roster.filter(e=>e[3]===s),p=rows.filter(e=>!absIds.has(e[0])).length;return \`<div class="dash-shift-row"><span>\${s==='HC'?'Hành chính':'Ca '+s}</span><b>\${p}/\${rows.length}</b><span>\${rows.length?(p/rows.length*100).toFixed(1):'0.0'}%</span></div>\`}).join('');
+ const typeRows=types.map(([k,v])=>\`<div class="dash-type-row"><span>\${esc(k)}</span><i>\${v}</i><b>\${roster.length?(v/roster.length*100).toFixed(1):'0.0'}%</b></div>\`).join('')||'<div class="note">Không có dữ liệu.</div>';
+ const active=emps().filter(e=>st.sh.includes(e[3])),missingLine=active.filter(e=>!String(e[6]||'').trim()).length,missingLeader=active.filter(e=>!String(e[8]||'').trim()).length,missingVendor=active.filter(e=>e[4]==='Thời vụ'&&!String(e[5]||'').trim()).length;
+ const quality=missingLine+missingLeader+missingVendor;
+ const chk=\`<div class="dash-shift-filter"><span class="k">Lọc ca:</span>\${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>\`<label><input type="checkbox" \${st.sh.includes(k)?'checked':''} onchange="tg('\${k}')">\${l}</label>\`).join('')}</div>\`;
+ return \`<section class="dash-head"><div><div class="dash-eyebrow">PRODUCTION · HUMAN RESOURCES</div><h2>Tổng quan nhân lực</h2><p>Theo dõi tình hình nhân lực và biến động sản xuất</p></div><div class="dash-date"><label for="dashDay">Ngày báo cáo</label><input id="dashDay" type="date" value="\${day}" onchange="go('day',this.value)"></div></section>
+ <div class="dash-toolbar">\${chk}<span class="dash-filter-note">Số liệu theo ngày đã chọn · Nhấn vào tên Line để xem danh sách</span></div>
+ <section class="dash-kpis">
+  <article class="dash-kpi"><div class="dash-kpi-label">Nhân lực trong ngày</div><div class="dash-kpi-value">\${roster.length.toLocaleString('vi-VN')}</div><div class="dash-kpi-foot">Theo ngày vào và ngày nghỉ việc</div><span class="dash-kpi-icon">👥</span></article>
+  <article class="dash-kpi"><div class="dash-kpi-label">Đang đi làm</div><div class="dash-kpi-value good">\${present.toLocaleString('vi-VN')}</div><div class="dash-kpi-foot">Chưa có lượt nghỉ được ghi nhận</div><span class="dash-kpi-icon">✓</span></article>
+  <article class="dash-kpi"><div class="dash-kpi-label">Nghỉ trong ngày</div><div class="dash-kpi-value warn">\${absent.toLocaleString('vi-VN')}</div><div class="dash-kpi-foot">Có lượt nghỉ đã ghi nhận</div><span class="dash-kpi-icon">◷</span></article>
+  <article class="dash-kpi"><div class="dash-kpi-label">Tỷ lệ đi làm</div><div class="dash-kpi-value">\${pct}%</div><div class="dash-kpi-foot">Đi làm / nhân lực trong ngày</div><span class="dash-kpi-icon">%</span></article>
+  <article class="dash-kpi"><div class="dash-kpi-label">Nghỉ việc trong ngày</div><div class="dash-kpi-value danger">\${resignedToday}</div><div class="dash-kpi-foot">Vào mới 7 ngày: \${new7} · Nghỉ việc 7 ngày: \${quit7}</div><span class="dash-kpi-icon">↘</span></article>
+ </section>
+ <section class="dash-main-grid">
+  <article class="card dash-panel dash-wide"><div class="dash-panel-head"><div><h3>Nhân lực theo Line</h3><p>Đi làm và nghỉ trong ngày · Bấm Line để xem chi tiết</p></div><span class="dash-mini-total">\${roster.length} người</span></div>
+   <div class="dash-legend"><span><i class="dash-present"></i>Đi làm</span><span><i class="dash-absent"></i>Nghỉ</span></div>\${lineRows}
+  </article>
+  <article class="card dash-panel"><div class="dash-panel-head"><div><h3>Cơ cấu nhân lực</h3><p>Phân loại theo hình thức lao động</p></div></div>\${typeRows}</article>
+  <article class="card dash-panel"><div class="dash-panel-head"><div><h3>Tình hình theo ca</h3><p>Nhân lực có mặt / tổng nhân lực</p></div></div>\${shiftRows||'<div class="note">Chọn ít nhất một ca.</div>'}</article>
+  <article class="card dash-panel dash-wide"><div class="dash-panel-head"><div><h3>Nhân lực thời vụ theo Vendor</h3><p>\${tv.length} nhân lực thời vụ trong ngày đã chọn</p></div></div>\${vendorRows}</article>
+ </section>
+ <section class="dash-bottom-grid">
+  <article class="card dash-panel"><div class="dash-panel-head"><div><h3>Chất lượng dữ liệu nhân sự</h3><p>Kiểm tra trên danh sách đang làm hiện tại</p></div><span class="dash-quality \${quality?'needs':'ok'}">\${quality?quality+' mục cần bổ sung':'Tốt'}</span></div>
+   <div class="dash-quality-row"><span>Chưa có Line</span><b>\${missingLine}</b></div><div class="dash-quality-row"><span>Chưa có Leader</span><b>\${missingLeader}</b></div><div class="dash-quality-row"><span>Thời vụ thiếu Vendor</span><b>\${missingVendor}</b></div>
+  </article>
+  <article class="card dash-panel"><div class="dash-panel-head"><div><h3>Thông tin báo cáo</h3><p>Phạm vi dữ liệu đang hiển thị</p></div></div>
+   <div class="dash-quality-row"><span>Ngày báo cáo</span><b>\${fd(day)}</b></div><div class="dash-quality-row"><span>Ca được chọn</span><b>\${shifts.join(', ')||'Không có'}</b></div><div class="dash-quality-row"><span>Nhân viên đang làm hiện tại</span><b>\${active.length}</b></div><div class="dash-quality-row"><span>Tổng lượt nghỉ trong ngày</span><b>\${leaves().filter(x=>x[7]===day&&st.sh.includes(x[3])).length}</b></div>
+  </article>
+ </section>
+ <div class="dash-trend">\${vNew()}</div>
+ <p class="note dash-source-note">Nguồn dữ liệu: Supabase và các thay đổi đã lưu trên hệ thống. Thống kê lịch sử được tính theo ngày vào, ngày nghỉ việc và lượt nghỉ đã ghi nhận. Không có dữ liệu chấm công thì “đi làm” được hiểu là chưa có lượt nghỉ trong ngày.</p>\`;
+}
 function goLine(k){st.line=k;tab=1;render()}
 function vLine(){const a=emps(),ls=Object.keys(cnt(a,e=>e[6])).sort();if(!st.line)st.line=ls[0];
  const b=a.filter(e=>e[6]===st.line&&sf(e[3])&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));const al=a.filter(e=>e[6]===st.line&&sf(e[3]));
