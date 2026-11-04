@@ -205,6 +205,25 @@ Deno.serve(async req => {
       const { data, error } = await admin.rpc("hr_apply_delta", { p_body: body, p_username: user.username });
       if (error) throw error; return reply(data, 200, origin);
     }
+    if (method === "POST" && route === "/api/system/reset-data") {
+      requireRole(user, ["admin"]);
+      const b = await req.json();
+      if (String(b.confirmation || "").trim() !== "XÂY LẠI DỮ LIỆU") {
+        return fail('Gõ đúng “XÂY LẠI DỮ LIỆU” để xác nhận', 400, origin);
+      }
+      const [employeeCount, leaveCount] = await Promise.all([
+        countRows("employees"),
+        countRows("leaves"),
+      ]);
+      const { error: leaveError } = await admin.from("leaves").delete().gte("id", 0);
+      if (leaveError) throw leaveError;
+      const { error: employeeError } = await admin.from("employees").delete().neq("id", "");
+      if (employeeError) throw employeeError;
+      const { error: importError } = await admin.from("imports").delete().gte("id", 0);
+      if (importError) throw importError;
+      await audit(user.username, "system_reset", `Xây lại dữ liệu: đã xóa ${employeeCount} nhân viên và ${leaveCount} lượt nghỉ`);
+      return reply({ ok: true, removed: { employees: employeeCount, leaves: leaveCount } }, 200, origin);
+    }
     if (route === "/api/users" && method === "GET") {
       requireRole(user, ["admin"]); const { data, error } = await admin.from("hr_users").select("username,name,role").order("username");
       if (error) throw error; return reply(data, 200, origin);
