@@ -205,6 +205,22 @@ Deno.serve(async req => {
       const { data, error } = await admin.rpc("hr_apply_delta", { p_body: body, p_username: user.username });
       if (error) throw error; return reply(data, 200, origin);
     }
+    if (method === "DELETE" && route.startsWith("/api/employees/")) {
+      requireRole(user, ["admin"]);
+      const id = decodeURIComponent(route.slice("/api/employees/".length)).trim();
+      if (!id || id.includes("/")) return fail("Mã nhân viên không hợp lệ", 400, origin);
+      const { data, error } = await admin.rpc("hr_delete_employee", { p_id: id, p_username: user.username });
+      if (error) throw error;
+      return reply(data, 200, origin);
+    }
+    if (method === "DELETE" && route === "/api/employees") {
+      requireRole(user, ["admin"]);
+      const b = await req.json();
+      if (String(b.confirmation || "").trim() !== "XÓA TOÀN BỘ NHÂN VIÊN") return fail('Gõ đúng “XÓA TOÀN BỘ NHÂN VIÊN” để xác nhận', 400, origin);
+      const { data, error } = await admin.rpc("hr_delete_all_employees", { p_username: user.username, p_confirmation: String(b.confirmation) });
+      if (error) throw error;
+      return reply(data, 200, origin);
+    }
     if (method === "POST" && route === "/api/system/reset-data") {
       requireRole(user, ["admin"]);
       const b = await req.json();
