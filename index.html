@@ -35,7 +35,7 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
 <script>
 let D={E:[],R:[],L:[],me:{name:"",role:""}};
-const TABS=['Tổng quan','DS nhân viên','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị'];
+const TABS=['Tổng quan','DS nhân viên','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị','TOP nhân lực nghỉ nhiều nhất'];
 const WD=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const CODE={P:'Phép năm (P)',"P/2":'Phép năm nửa ngày (P/2)',TD:'Nghỉ tự do (TD)',R:'Không lương (R)',RCC:'Không lương CC (RCC)',O:'Nghỉ ốm (O)',Stop:'Báo nghỉ việc',"ĐM":'Đi muộn'};
 const TYPES=['Chính thức','Thời vụ','Sinh viên'];
@@ -140,6 +140,42 @@ function vLeave(){const all=leaves().filter(x=>sf(x[3]));let f,title;
  ltCards(f)+(!st.lt.length?'<div class="note" style="margin:0 0 8px">Tích vào ô loại nhân lực ở trên để xem danh sách người nghỉ.</div>':tbl(['Ngày','Thứ','Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do',''],f.filter(x=>st.lt.includes(x[4]||'?')).map(x=>[fd(x[7]),wdOf(x[7]),esc(x[0]),esc(x[1])||'<span class="note">(chưa có trong DS)</span>',esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),['admin','editor'].includes(D.me.role)?`<button class="b g" onclick="editLeave('${x[0]}','${x[7]}','${x[5]}','${esc(x[6]).replace(/'/g,"&#39;")}')">Sửa</button>`:''])))+
  `${vEmpLeave()}<div class="card" style="margin-top:12px"><h3>Ghi nhận nghỉ cho ngày bất kỳ</h3><div class="f"><div><label>Nhân viên (mã hoặc tên)</label><input id="lE" list="el" placeholder="Gõ để tìm"><datalist id="el">${a.map(e=>`<option value="${esc(e[0])} - ${esc(e[1])}">`).join('')}</datalist></div><div><label>Ngày nghỉ</label><input id="lD" type="date" value="${st.day}"></div><div><label>Loại nghỉ</label><select id="lC">${Object.entries(CODE).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div><label>Lý do</label><input id="lR"></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addLeave()">Ghi nhận</button><span class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div>
  <p class="note">File gốc chỉ có danh sách nghỉ của 19/10/2026 (không có ngày tháng cho các ngày trước), nên thống kê tháng/năm/thứ sẽ đầy dần khi bạn ghi nhận mỗi ngày.</p></div>`}
+function vTopLeave(){
+ const year=String(st.topYear||TD.slice(0,4)),q=nz(st.topQ||'');
+ const allEmp=[...D.E,...S.adds,...D.R],byId=new Map();
+ allEmp.forEach(e=>{if(e&&e[0])byId.set(String(e[0]),e)});
+ const rows=[...byId.values()].map(e=>{
+  const id=String(e[0]),monthly=Array(12).fill(0);
+  leaves().forEach(x=>{
+   if(String(x[0])!==id||!x[7]||!String(x[7]).startsWith(year))return;
+   if(!['P','P/2','TD','R','RCC','O'].includes(x[5]))return;
+   const m=Number(String(x[7]).slice(5,7))-1;
+   if(m>=0&&m<12)monthly[m]+=x[5]==='P/2'?0.5:1;
+  });
+  const total=monthly.reduce((a,b)=>a+b,0);
+  const resignedFlag=!!S.res[id]||D.R.some(x=>String(x[0])===id);
+  return {id,name:e[1]||'',manager:e[8]||'',type:e[4]||'',vendor:e[5]||'',line:e[6]||'',status:resignedFlag?'Đã nghỉ việc':'Đang làm',monthly,total};
+ }).filter(x=>x.total>0)
+ .filter(x=>!q||nz([x.id,x.name,x.manager,x.type,x.vendor,x.line,x.status].join(' ')).includes(q))
+ .sort((a,b)=>b.total-a.total||String(a.name).localeCompare(String(b.name),'vi'));
+ const totalDays=rows.reduce((n,x)=>n+x.total,0),top=rows.slice(0,10);
+ const monthLabels=Array.from({length:12},(_,i)=>'T'+(i+1));
+ const fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
+ const monthTotal=monthLabels.map((_,i)=>rows.reduce((n,x)=>n+x.monthly[i],0));
+ return `<div class="card">
+ <div class="tb" style="justify-content:space-between"><div><h3>TOP NHÂN LỰC NGHỈ NHIỀU NHẤT</h3><div class="note">Thống kê theo năm · P/2 quy đổi 0,5 ngày · Không tính báo nghỉ việc và đi muộn</div></div>
+ <div class="tb"><label>Năm</label><input type="number" min="2020" max="2100" value="${esc(year)}" onchange="go('topYear',this.value)" style="width:100px">
+ <input data-k="topQ" placeholder="Tìm mã, họ tên, quản lý, line..." value="${esc(st.topQ||'')}" oninput="inp('topQ',this.value)" style="min-width:220px"></div></div>
+ ${kpi([['Nhân viên có nghỉ',rows.length],['Tổng ngày nghỉ',fmt(totalDays)],['Bình quân / người',rows.length?fmt(totalDays/rows.length):'0'],['Năm thống kê',year]])}
+ <div class="cols" style="margin:12px 0">
+  <div class="card"><h3>TOP 10 nhân viên nghỉ nhiều nhất</h3>${top.length?bars(Object.fromEntries(top.map(x=>[x.name+' ('+x.id+')',x.total])),totalDays):'<div class="note">Chưa có dữ liệu nghỉ trong năm này.</div>'}</div>
+  <div class="card"><h3>Tổng ngày nghỉ theo tháng</h3>${barsO(monthLabels.reduce((o,k,i)=>(o[k]=monthTotal[i],o),{}),monthTotal.reduce((a,b)=>a+b,0))}</div>
+ </div>
+ <div class="tw" style="overflow:auto"><table><thead><tr>${['ID','HỌ TÊN','QUẢN LÝ','LOẠI','VENDOR','TÌNH TRẠNG',...monthLabels,'TOTAL'].map(h=>'<th>'+h+'</th>').join('')}</tr></thead>
+ <tbody>${rows.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.manager)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.vendor)+'</td><td>'+esc(x.status)+'</td>'+x.monthly.map(n=>'<td style="text-align:right">'+(n?fmt(n):'–')+'</td>').join('')+'<td style="text-align:right;font-weight:700">'+fmt(x.total)+'</td></tr>').join('')||'<tr><td colspan="19" class="note">Không có nhân viên nghỉ trong năm đã chọn.</td></tr>'}</tbody></table></div>
+ <p class="note">Đang xếp hạng ${rows.length} nhân viên có phát sinh nghỉ trong năm ${esc(year)}. Dữ liệu lấy từ các lượt nghỉ đã ghi nhận trong hệ thống; nhân viên đã nghỉ việc vẫn được giữ trong thống kê.</p>
+ </div>`;
+}
 function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x=>(x[7]||'').slice(0,7)).filter(Boolean))].sort().reverse();
  const f=a.filter(x=>(!st.rm||(x[7]||'').startsWith(st.rm))&&(!st.rt||x[4]===st.rt)&&(!st.rq||nz(x.join(' ')).includes(nz(st.rq))));
  const bm=cnt(f.filter(x=>x[7]),x=>x[7].slice(0,7)),mk=Object.keys(bm).sort().slice(-8),wd=cnt(f.filter(x=>x[7]),x=>wdOf(x[7]));
@@ -433,6 +469,11 @@ function exportTabXlsx(){
   sheet('Nhan vien dang lam',eh,empRows(act.filter(e=>sf(e[3]))));
   sheet('Nhan vien nghi viec',rh,resignRows(res.filter(e=>sf(e[3]))));
   sheet('Nghi hang ngay',lh,leaveRows(allL.filter(x=>sf(x[3]))));label='Them_Nghi_viec';
+ }else if(tab===9){
+  const year=String(st.topYear||TD.slice(0,4)),byId=new Map();
+  [...D.E,...S.adds,...D.R].forEach(e=>{if(e&&e[0])byId.set(String(e[0]),e)});
+  const rows=[...byId.values()].map(e=>{const m=Array(12).fill(0);allL.forEach(x=>{if(String(x[0])===String(e[0])&&String(x[7]||'').startsWith(year)&&['P','P/2','TD','R','RCC','O'].includes(x[5])){const i=Number(String(x[7]).slice(5,7))-1;if(i>=0&&i<12)m[i]+=x[5]==='P/2'?0.5:1}});return [e[0],e[1],e[8]||'',e[4]||'',e[5]||'',...m,m.reduce((a,b)=>a+b,0)]}).filter(x=>x[17]>0).sort((a,b)=>b[17]-a[17]);
+  sheet('Top nghi nhieu nhat',['ID','Họ tên','Quản lý','Loại','Vendor','Tình trạng',...Array.from({length:12},(_,i)=>'T'+(i+1)),'Total'],rows.map(x=>[...x.slice(0,5),res.some(e=>String(e[0])===String(x[0]))?'Đã nghỉ việc':'Đang làm',...x.slice(5)]));label='TOP_nghi_nhieu_nhat_'+year;
  }else if(tab===8){
   sheet('Tai khoan',['Tên đăng nhập','Tên hiển thị','Vai trò'],(st.users||[]).map(u=>[u.username,u.name,ROLEL[u.role]||u.role]));
   sheet('Kiem tra',['Hạng mục','Số lượng','Ví dụ'],((st.checks||{}).items||[]).map(i=>[i.label,i.count,(i.sample||[]).join(' · ')]));
@@ -500,7 +541,7 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
 async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}D=await r.json();if(Array.isArray(D.L))D.L=D.L.map(x=>{if(Array.isArray(x)&&x[7])x[7]=String(x[7]).slice(0,10);return x});$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){$('sub').textContent='Lỗi tải dữ liệu từ máy chủ: '+String(e?.message||e||'Lỗi không xác định')}}
 function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===8&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc · '+(D.L||[]).length+' lượt nghỉ đã tải';
- const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin][tab]();}
+ const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin,vTopLeave][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
 </script></body></html>
 <!-- GitHub Pages redeploy trigger: overview UI update -->
