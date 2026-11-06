@@ -71,6 +71,15 @@ function vEmpLeave(){const all=D.E.concat(S.adds),e=all.find(x=>x[0]===st.le),yr
  const hd=`<h3>Tra cứu số ngày nghỉ của 1 nhân viên trong năm</h3><div class="tb"><input list="el2" placeholder="Gõ mã hoặc tên nhân viên" value="${e?esc(e[0]+' - '+e[1]):''}" onchange="go('le',this.value.split(' - ')[0].trim())" style="min-width:240px"><datalist id="el2">${all.map(x=>`<option value="${esc(x[0])} - ${esc(x[1])}">`).join('')}</datalist><input type="number" min="2020" max="2100" value="${yr}" onchange="go('ly',this.value)" style="width:100px"></div>`;
  if(!e)return `<div class="card" style="margin-top:12px">${hd}<div class="note">Chọn nhân viên để xem chi tiết. Mỗi lượt ghi nhận tính là 1 ngày nghỉ.</div></div>`;
  return `<div class="card" style="margin-top:12px">${hd}<div class="note" style="margin:0 0 10px"><b>${esc(e[1])}</b> · Mã ${esc(e[0])} · ${esc(e[6])} · Ca ${esc(e[3])} · ${esc(e[4])}${S.res[e[0]]?' · <span style="color:var(--er)">Đã nghỉ việc</span>':''}</div>`+kpi([['Tổng ngày nghỉ năm '+yr,ls.reduce((n,x)=>n+(x[5]==='P/2'?0.5:1),0)],['Phép năm đã dùng (ngày)',ls.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)],['Nghỉ tự do (TD)',ls.filter(x=>x[5]==='TD').length],['Loại khác',ls.filter(x=>x[5]!=='P'&&x[5]!=='TD').length]])+`<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng</h3>${barsO(mk,mo)}</div><div class="card"><h3>Theo loại nghỉ</h3>${bars(cd,ls.length)}</div></div>`+tbl(['STT','Ngày','Thứ','Loại nghỉ','Lý do'],ls.map((x,i)=>[i+1,fd(x[7]),wdOf(x[7]),esc(CODE[x[5]]||x[5]),esc(x[6])]))+`</div>`}
+function exportOverviewWorking(){
+ const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
+ const leaveIds=new Set(allL.map(x=>String(x[0])));
+ const rows=emps().filter(e=>sf(e[3])&&!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
+ const wb=XLSX.utils.book_new();
+ const data=[eH,...rows.map(e=>[e[0],e[1],e[3],e[4],e[5],e[6],e[7],e[8],fd(e[2])])];
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nhan luc di lam');
+ XLSX.writeFile(wb,'Nhan_luc_di_lam_'+st.day+'.xlsx');
+}
 function setOverviewDetail(k){st.ovDetail=st.ovDetail===k?'':k;st.ovDetailQ='';render()}
 function ovAtt(a){
  const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
@@ -82,7 +91,7 @@ function ovAtt(a){
  let detail='';
  if(st.ovDetail==='working'){
   const rows=a.filter(e=>!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
-  detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực đi làm · ${rows.length} người</h3><button class="b g" onclick="setOverviewDetail('working')">Đóng</button></div>${tbl(eH,rows.map(eRow))}</div>`;
+  detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực đi làm · ${rows.length} người</h3><div class="tb"><button class="b" onclick="exportOverviewWorking()">Xuất Excel</button><button class="b g" onclick="setOverviewDetail('working')">Đóng</button></div></div>${tbl(eH,rows.map(eRow))}</div>`;
  }else if(st.ovDetail==='daily'){
   const rows=allL.filter(x=>leaveIds.has(String(x[0]))).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
   detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực nghỉ hằng ngày · ${rows.length} lượt</h3><button class="b g" onclick="setOverviewDetail('daily')">Đóng</button></div>${tbl(['Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do','Ngày'],rows.map(x=>[esc(x[0]),esc(x[1]),esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),fd(x[7])]))}</div>`;
