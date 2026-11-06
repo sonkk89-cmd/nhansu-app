@@ -169,7 +169,7 @@ function vTopLeave(){
  ${kpi([['Nhân viên có nghỉ',rows.length],['Tổng ngày nghỉ',fmt(totalDays)],['Bình quân / người',rows.length?fmt(totalDays/rows.length):'0'],['Năm thống kê',year]])}
  <div class="cols" style="margin:12px 0">
   <div class="card"><h3>TOP 10 nhân viên nghỉ nhiều nhất</h3>${top.length?bars(Object.fromEntries(top.map(x=>[x.name+' ('+x.id+')',x.total])),totalDays):'<div class="note">Chưa có dữ liệu nghỉ trong năm này.</div>'}</div>
-  <div class="card"><h3>Tổng ngày nghỉ theo tháng</h3>${barsO(monthLabels.reduce((o,k,i)=>(o[k]=monthTotal[i],o),{}),monthTotal.reduce((a,b)=>a+b,0))}</div>
+  <div class="card"><h3>Tổng ngày nghỉ theo tháng</h3>${barsO(monthLabels,Object.fromEntries(monthLabels.map((k,i)=>[k,monthTotal[i]])))}</div>
  </div>
  <div class="tw" style="overflow:auto"><table><thead><tr>${['ID','HỌ TÊN','QUẢN LÝ','LOẠI','VENDOR','TÌNH TRẠNG',...monthLabels,'TOTAL'].map(h=>'<th>'+h+'</th>').join('')}</tr></thead>
  <tbody>${rows.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.manager)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.vendor)+'</td><td>'+esc(x.status)+'</td>'+x.monthly.map(n=>'<td style="text-align:right">'+(n?fmt(n):'–')+'</td>').join('')+'<td style="text-align:right;font-weight:700">'+fmt(x.total)+'</td></tr>').join('')||'<tr><td colspan="19" class="note">Không có nhân viên nghỉ trong năm đã chọn.</td></tr>'}</tbody></table></div>
