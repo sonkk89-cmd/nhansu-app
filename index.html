@@ -144,7 +144,7 @@ function vTopLeave(){
  const year=String(st.topYear||TD.slice(0,4)),q=nz(st.topQ||'');
  const allEmp=[...D.E,...S.adds,...D.R],byId=new Map();
  allEmp.forEach(e=>{if(e&&e[0])byId.set(String(e[0]),e)});
- const rows=[...byId.values()].map(e=>{
+ const rows=[...byId.values()].filter(e=>sf(e[3])).map(e=>{
   const id=String(e[0]),monthly=Array(12).fill(0);
   leaves().forEach(x=>{
    if(String(x[0])!==id||!x[7]||!String(x[7]).startsWith(year))return;
@@ -162,7 +162,7 @@ function vTopLeave(){
  const monthLabels=Array.from({length:12},(_,i)=>'T'+(i+1));
  const fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
  const monthTotal=monthLabels.map((_,i)=>rows.reduce((n,x)=>n+x.monthly[i],0));
- return `<div class="card">
+ return chkb()+`<div class="card">
  <div class="tb" style="justify-content:space-between"><div><h3>TOP NHÂN LỰC NGHỈ NHIỀU NHẤT</h3><div class="note">Thống kê theo năm · P/2 quy đổi 0,5 ngày · Không tính báo nghỉ việc và đi muộn</div></div>
  <div class="tb"><label>Năm</label><input type="number" min="2020" max="2100" value="${esc(year)}" onchange="go('topYear',this.value)" style="width:100px">
  <input data-k="topQ" placeholder="Tìm mã, họ tên, quản lý, line..." value="${esc(st.topQ||'')}" oninput="inp('topQ',this.value)" style="min-width:220px"></div></div>
@@ -472,7 +472,7 @@ function exportTabXlsx(){
  }else if(tab===9){
   const year=String(st.topYear||TD.slice(0,4)),byId=new Map();
   [...D.E,...S.adds,...D.R].forEach(e=>{if(e&&e[0])byId.set(String(e[0]),e)});
-  const rows=[...byId.values()].map(e=>{const m=Array(12).fill(0);allL.forEach(x=>{if(String(x[0])===String(e[0])&&String(x[7]||'').startsWith(year)&&['P','P/2','TD','R','RCC','O'].includes(x[5])){const i=Number(String(x[7]).slice(5,7))-1;if(i>=0&&i<12)m[i]+=x[5]==='P/2'?0.5:1}});return [e[0],e[1],e[8]||'',e[4]||'',e[5]||'',...m,m.reduce((a,b)=>a+b,0)]}).filter(x=>x[17]>0).sort((a,b)=>b[17]-a[17]);
+  const rows=[...byId.values()].filter(e=>sf(e[3])).map(e=>{const m=Array(12).fill(0);allL.forEach(x=>{if(String(x[0])===String(e[0])&&String(x[7]||'').startsWith(year)&&['P','P/2','TD','R','RCC','O'].includes(x[5])){const i=Number(String(x[7]).slice(5,7))-1;if(i>=0&&i<12)m[i]+=x[5]==='P/2'?0.5:1}});return [e[0],e[1],e[8]||'',e[4]||'',e[5]||'',...m,m.reduce((a,b)=>a+b,0)]}).filter(x=>x[17]>0).sort((a,b)=>b[17]-a[17]);
   sheet('Top nghi nhieu nhat',['ID','Họ tên','Quản lý','Loại','Vendor','Tình trạng',...Array.from({length:12},(_,i)=>'T'+(i+1)),'Total'],rows.map(x=>[...x.slice(0,5),res.some(e=>String(e[0])===String(x[0]))?'Đã nghỉ việc':'Đang làm',...x.slice(5)]));label='TOP_nghi_nhieu_nhat_'+year;
  }else if(tab===8){
   sheet('Tai khoan',['Tên đăng nhập','Tên hiển thị','Vai trò'],(st.users||[]).map(u=>[u.username,u.name,ROLEL[u.role]||u.role]));
