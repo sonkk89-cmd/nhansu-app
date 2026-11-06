@@ -87,7 +87,7 @@ function ovAtt(a){
  const n=a.filter(e=>leaveIds.has(String(e[0]))).length,w=a.length-n;
  const gone=resigned().filter(e=>sf(e[3]));
  const pc=a.length?(n/a.length*100).toFixed(1):'0.0';
- const tile=(k,l,v,c)=>`<div class="card cl ${st.ovDetail===k?'sel':''}" onclick="setOverviewDetail('${k}')" style="flex:1;margin:0;border-left:4px solid ${c};padding:10px 12px;cursor:pointer"><div class="k">${l} <span class="note">· bấm để xem</span></div><div class="v" style="font-size:24px">${v}</div></div>`;
+ const tile=(k,l,v,c)=>`<div class="card cl ${st.ovDetail===k?'sel':''}" onclick="setOverviewDetail('${k}')" style="flex:1;margin:0;border-left:4px solid ${c};padding:10px 12px;cursor:pointer"><div class="k">${l} </div><div class="v" style="font-size:24px">${v}</div></div>`;
  let detail='';
  if(st.ovDetail==='working'){
   const rows=a.filter(e=>!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
