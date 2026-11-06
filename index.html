@@ -80,6 +80,20 @@ function exportOverviewWorking(){
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nhan luc di lam');
  XLSX.writeFile(wb,'Nhan_luc_di_lam_'+st.day+'.xlsx');
 }
+function exportOverviewDaily(){
+ const rows=leaves().filter(x=>x[7]===st.day&&sf(x[3])).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
+ const data=[['Mã NV','Họ tên','Line','Ca','Loại nhân lực','Loại nghỉ','Lý do','Ngày'],...rows.map(x=>[x[0],x[1],x[2],x[3],x[4],CODE[x[5]]||x[5],x[6],fd(x[7])])];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nghi hang ngay');
+ XLSX.writeFile(wb,'Nhan_luc_nghi_hang_ngay_'+st.day+'.xlsx');
+}
+function exportOverviewResigned(){
+ const rows=resigned().filter(e=>sf(e[3])).sort((x,y)=>String(y[7]||'').localeCompare(String(x[7]||'')));
+ const data=[['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Ngày nghỉ','Lý do'],...rows.map(x=>[x[0],x[1],fd(x[2]),x[3],x[4],x[5],x[6],fd(x[7]),x[8]||''])];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nghi viec');
+ XLSX.writeFile(wb,'Nhan_luc_nghi_viec_'+st.day+'.xlsx');
+}
 function setOverviewDetail(k){st.ovDetail=st.ovDetail===k?'':k;st.ovDetailQ='';render()}
 function ovAtt(a){
  const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
@@ -94,10 +108,10 @@ function ovAtt(a){
   detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực đi làm · ${rows.length} người</h3><div class="tb"><button class="b" onclick="exportOverviewWorking()">Xuất Excel</button><button class="b g" onclick="setOverviewDetail('working')">Đóng</button></div></div>${tbl(eH,rows.map(eRow))}</div>`;
  }else if(st.ovDetail==='daily'){
   const rows=allL.filter(x=>leaveIds.has(String(x[0]))).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
-  detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực nghỉ hằng ngày · ${rows.length} lượt</h3><button class="b g" onclick="setOverviewDetail('daily')">Đóng</button></div>${tbl(['Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do','Ngày'],rows.map(x=>[esc(x[0]),esc(x[1]),esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),fd(x[7])]))}</div>`;
+  detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực nghỉ hằng ngày · ${rows.length} lượt</h3><div class="tb"><button class="b" onclick="exportOverviewDaily()">Xuất Excel</button><button class="b g" onclick="setOverviewDetail('daily')">Đóng</button></div></div>${tbl(['Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do','Ngày'],rows.map(x=>[esc(x[0]),esc(x[1]),esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),fd(x[7])]))}</div>`;
  }else if(st.ovDetail==='resigned'){
   const rows=gone.slice().sort((x,y)=>String(y[7]||'').localeCompare(String(x[7]||'')));
-  detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực nghỉ việc · ${rows.length} người</h3><button class="b g" onclick="setOverviewDetail('resigned')">Đóng</button></div>${tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Vendor','Line','Ngày nghỉ','Lý do'],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[3]),esc(x[4]),esc(x[5]),esc(x[6]),fd(x[7]),esc(x[8])||'<span class="note">(chưa ghi lý do)</span>']))}</div>`;
+  detail=`<div class="card" style="margin-top:10px"><div class="tb" style="justify-content:space-between"><h3>Danh sách nhân lực nghỉ việc · ${rows.length} người</h3><div class="tb"><button class="b" onclick="exportOverviewResigned()">Xuất Excel</button><button class="b g" onclick="setOverviewDetail('resigned')">Đóng</button></div></div>${tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Vendor','Line','Ngày nghỉ','Lý do'],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[3]),esc(x[4]),esc(x[5]),esc(x[6]),fd(x[7]),esc(x[8])||'<span class="note">(chưa ghi lý do)</span>']))}</div>`;
  }
  return `<div style="margin-top:14px"><div class="k" style="margin-bottom:6px">Tình trạng nhân lực – ngày ${fd(st.day)}</div><div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">${tile('working','Nhân lực đi làm',w,CL.w)}${tile('daily','Nhân lực nghỉ hằng ngày',n,CL.a)}${tile('resigned','Nhân lực nghỉ việc',gone.length,'var(--er)')}</div><div class="k" style="margin:0 0 8px">Tỷ lệ nghỉ hằng ngày: ${pc}%</div>${tbl(['Ca','Đi làm','Nghỉ hằng ngày','Nghỉ việc'],['A','C','HC'].map(c=>{const x=a.filter(e=>e[3]===c),k=x.filter(e=>leaveIds.has(String(e[0]))).length,r=gone.filter(e=>e[3]===c).length;return [c==='HC'?'HC':'Ca '+c,x.length-k,k,r]}))}${detail}</div>`;
 }
