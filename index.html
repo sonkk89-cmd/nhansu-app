@@ -173,8 +173,8 @@ function isoWeekMonday(year,week){const d=new Date(Date.UTC(Number(year),0,4));c
 function isoWeekCount(year){const d=new Date(Date.UTC(Number(year),11,28));const day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-day);return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7);}
 function weekDates(year,week){const m=isoWeekMonday(year,week);return Array.from({length:7},(_,i)=>{const d=new Date(m);d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});}
 function isoWeekNumber(dateStr){const d=new Date(dateStr+'T00:00:00Z');const day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-day);return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7);}
-function toggleLeaveWeekday(i,checked){st.leaveWeekdays=st.leaveWeekdays||[];st.leaveWeekdays=checked?[...new Set([...st.leaveWeekdays,i])]:st.leaveWeekdays.filter(x=>x!==i);render();}
-function weekBars(rows,selected){const max=Math.max(1,...rows.map(r=>r.n));return rows.map(r=>'<div onclick="toggleLeaveWeekday('+r.i+','+(!selected.includes(r.d))+')" style="display:grid;grid-template-columns:82px minmax(90px,1fr) 28px;gap:8px;align-items:center;padding:5px 4px;border-radius:7px;cursor:pointer;'+(selected.includes(r.d)?'background:var(--soft);':'')+'"><div><div style="font-size:12px;color:var(--muted)">'+fd(r.d)+'</div><b>'+WD[(r.i+1)%7]+'</b></div><span class="t"><i style="display:block;width:'+(r.n/max*100)+'%"></i></span><b style="text-align:right">'+r.n+'</b></div>').join('')}
+function toggleLeaveWeekday(date,checked){st.leaveWeekdays=Array.isArray(st.leaveWeekdays)?st.leaveWeekdays.filter(x=>typeof x==='string'):[];st.leaveWeekdays=checked?[...new Set([...st.leaveWeekdays,date])]:st.leaveWeekdays.filter(x=>x!==date);render();}
+function weekBars(rows,selected){const max=Math.max(1,...rows.map(r=>r.n));return rows.map(r=>'<div class="bar" onclick="toggleLeaveWeekday(\''+r.d+'\','+(!selected.includes(r.d))+')" style="cursor:pointer;padding:4px 6px;border-radius:7px;'+(selected.includes(r.d)?'background:var(--soft);':'')+'"><span style="white-space:normal;line-height:1.2"><small style="display:block;color:var(--muted);font-size:11px;font-weight:400">'+fd(r.d)+'</small><b>'+WD[(r.i+1)%7]+'</b></span><span class="t"><i style="width:'+(r.n/max*100)+'%"></i></span><b>'+r.n+'</b></div>').join('')}
 function vLeave(){
  const all=leaves().filter(x=>sf(x[3]));
  const today=st.day||new Date().toISOString().slice(0,10);
@@ -183,7 +183,8 @@ function vLeave(){
  if(!Array.isArray(st.leaveWeekdays))st.leaveWeekdays=[];
  const year=Number(st.leaveYear),week=Number(st.leaveWeek),dates=weekDates(year,week);
  const rows=dates.map((d,i)=>({d,i,n:all.filter(x=>x[7]===d).length}));
- const selected=rows.filter(r=>st.leaveWeekdays.includes(r.d)||st.leaveWeekdays.includes(r.i)).map(r=>r.d);
+ st.leaveWeekdays=st.leaveWeekdays.filter(x=>typeof x==='string');
+ const selected=rows.filter(r=>st.leaveWeekdays.includes(r.d)).map(r=>r.d);
  const weekSet=new Set(dates),weekData=all.filter(x=>weekSet.has(x[7]));
  const f=all.filter(x=>selected.includes(x[7]));
  const displayData=selected.length?f:weekData;
