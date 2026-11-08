@@ -265,9 +265,9 @@ function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x
  tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]&&['admin','editor'].includes(D.me.role)?`<button class="b g" onclick="editResignation('${x[0]}','${x[7]}','${esc(x[8]).replace(/'/g,"&#39;")}')">Sửa</button><button class="r" onclick="restore('${x[0]}')">Khôi phục</button>`:'']),
  f.length>rows.length?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('rn',st.rn+200)">Xem thêm (${f.length-rows.length})</button></div>`:'')}
 function vEmployees(){
- const all=emps().slice().sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
+ const all=emps().filter(e=>sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
  const q=nz(st.eq||''),a=q?all.filter(e=>nz(e.join(' ')).includes(q)):all,canEdit=['admin','editor'].includes(D.me.role);
- return `<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
+ return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
  tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
 }
 
@@ -522,7 +522,7 @@ function exportTabXlsx(){
   sheet('Vao moi 14 ngay',eh.slice(0,7),act.filter(e=>e[2]>=start&&e[2]<=st.day).map(e=>e.slice(0,7)));
   sheet('Nghi viec 14 ngay',rh,res.filter(e=>e[7]>=start&&e[7]<=st.day&&sf(e[3])).map(e=>[e[0],e[1],e[2],e[4],e[5],e[6],e[3],e[7],e[8]]));
  }else if(tab===1){
-  const q=nz(st.eq||''),a=act.slice().sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi')).filter(e=>!q||nz(e.join(' ')).includes(q));
+  const q=nz(st.eq||''),a=act.filter(e=>sf(e[3])).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi')).filter(e=>!q||nz(e.join(' ')).includes(q));
   sheet('DS nhan vien',eh,empRows(a));
  }else if(tab===2){
   const a=act.filter(e=>e[6]===st.line&&sf(e[3])&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));
