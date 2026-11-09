@@ -68,8 +68,14 @@ function dateValue(v: unknown) {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : "";
 }
 async function fetchLiveCheckins(date: string, employeeIds: string[]) {
-  const cookie = Deno.env.get("ILSUNGTECH_COOKIE") || "";
-  const csrfToken = Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "";
+  // Accept either the raw Cookie header value or a copied "Cookie: ..." line.
+  const cookie = (Deno.env.get("ILSUNGTECH_COOKIE") || "")
+    .replace(/^\\s*Cookie:\\s*/i, "")
+    .replace(/[\\r\\n]+/g, " ")
+    .trim();
+  const csrfToken = (Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "")
+    .replace(/^\\s*X-Frappe-Csrf-Token:\\s*/i, "")
+    .trim();
   if (!cookie) throw Object.assign(new Error("Chưa cấu hình kết nối hệ thống chấm công (ILSUNGTECH_COOKIE)"), { status: 503 });
   const baseUrl = (Deno.env.get("ILSUNGTECH_BASE_URL") || "https://next.il-sungtech.com").replace(/\/+$/, "");
   const body = new URLSearchParams({
@@ -95,7 +101,15 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   } catch {
     throw Object.assign(new Error("Không kết nối được hệ thống chấm công nội bộ"), { status: 502 });
   }
-  if (!response.ok) throw Object.assign(new Error(`Hệ thống chấm công trả về HTTP ${response.status}; phiên kết nối có thể đã hết hạn`), { status: 502 });
+  if (!response.ok) {
+    let detail = `Hệ thống chấm công trả về HTTP ${response.status}`;
+    if (response.status === 400) {
+      detail += ". Kiểm tra secret ILSUNGTECH_COOKIE chỉ chứa giá trị Cookie (không kèm nhãn Cookie:), đúng hệ thống next.il-sungtech.com; nếu vẫn lỗi, cần cập nhật CSRF token theo request mới nhất.";
+    } else if (response.status === 401 || response.status === 403) {
+      detail += ". Phiên đăng nhập có thể hết hạn hoặc tài khoản ERP chưa có quyền xem báo cáo.";
+    }
+    throw Object.assign(new Error(detail), { status: 502 });
+  }
   let payload: any;
   try { payload = await response.json(); }
   catch { throw Object.assign(new Error("Phiên nguồn có thể hết hạn hoặc phản hồi không phải JSON"), { status: 502 }); }
