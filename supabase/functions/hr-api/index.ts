@@ -68,10 +68,12 @@ function dateValue(v: unknown) {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : "";
 }
 async function fetchLiveCheckins(date: string, employeeIds: string[]) {
-  // Accept either the raw Cookie header value or a copied "Cookie: ..." line.
+  // Accept Cookie or Set-Cookie input, but forward only cookie pairs, never Set-Cookie attributes.
   const cookie = (Deno.env.get("ILSUNGTECH_COOKIE") || "")
-    .replace(/^\\s*Cookie:\\s*/i, "")
+    .replace(/^\\s*(?:Set-)?Cookie:\\s*/i, "")
     .replace(/[\\r\\n]+/g, " ")
+    .replace(/;\\s*(?:expires=[^;]*|max-age=\\d+|httponly|secure|path=[^;]*|samesite=[^;]*|domain=[^;]*)/gi, "")
+    .replace(/;\\s*$/g, "")
     .trim();
   const csrfToken = (Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "")
     .replace(/^\\s*X-Frappe-Csrf-Token:\\s*/i, "")
