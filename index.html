@@ -57,6 +57,20 @@ const nz=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/
 const cnt=(a,f)=>{const o={};a.forEach(x=>{const k=f(x)||'(trống)';o[k]=(o[k]||0)+1});return o};
 const wdOf=d=>WD[new Date(d+'T00:00:00').getDay()];
 function emps(){return D.E.concat(S.adds).filter(e=>!S.res[e[0]])}
+// Nhân lực tại một ngày bất kỳ: đã vào làm (ngày vào <= ngày xem) và chưa nghỉ việc tại ngày đó.
+// Người nghỉ việc đúng ngày xem được tính ở mục "Nhân lực nghỉ việc", không tính vào "đi làm".
+function empsAt(day){
+ const rd=new Map();
+ Object.keys(S.res).forEach(id=>rd.set(String(id),S.res[id][0]||''));
+ D.R.forEach(r=>rd.set(String(r[0]),r[7]||''));
+ const old=D.R.map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[10]||'',r[11]||'',r[12]||'']);
+ return D.E.concat(S.adds,old).filter(e=>{
+  const id=String(e[0]),j=e[2]||'';
+  if(j&&j>day)return false;
+  if(rd.has(id)){const r=rd.get(id);if(!r||r<=day)return false}
+  return true;
+ });
+}
 function resigned(){return D.E.concat(S.adds).filter(e=>S.res[e[0]]).map(e=>[e[0],e[1],e[2],e[3],e[4],e[5],e[6],S.res[e[0]][0],S.res[e[0]][1],1]).concat(D.R).sort((a,b)=>(b[7]||'').localeCompare(a[7]||''))}
 function leaves(){return D.L.map(x=>x.concat(1)).concat(S.leaves.map(x=>x.concat(1)))}
 function bars(o,tot,click){const m=Math.max(1,...Object.values(o));return Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar ${click?'cl':''}" ${click?`onclick="${click}('${esc(k).replace(/'/g,"\\'")}')"`:''}><span title="${esc(k)}">${esc(k)}</span><span class="t"><i style="width:${v/m*100}%"></i></span><b>${v}</b></div>`).join('')||'<div class="note">Không có dữ liệu</div>'}
@@ -82,7 +96,7 @@ function vEmpLeave(){const all=D.E.concat(S.adds),e=all.find(x=>x[0]===st.le),yr
 function exportOverviewWorking(){
  const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
  const leaveIds=new Set(allL.map(x=>String(x[0])));
- const rows=emps().filter(e=>sf(e[3])&&!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
+ const rows=empsAt(st.day).filter(e=>sf(e[3])&&!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
  const wb=XLSX.utils.book_new();
  const data=[eH,...rows.map(e=>[e[0],e[1],e[3],e[4],e[5],e[6],e[7],e[8],fd(e[2])])];
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nhan luc di lam');
@@ -139,13 +153,13 @@ function vNew(){
 }
 const CL={w:'var(--bar)',a:'var(--wr)',r:'var(--er)'};
 function ovData(kf,ft){const day=st.day,ym=day.slice(0,7),ab=new Set(leaves().filter(x=>x[7]===day).map(x=>x[0])),o={},g=k=>{k=k||'(trống)';return o[k]||(o[k]={w:0,a:0,r:0})};
- emps().filter(e=>sf(e[3])&&(!ft||ft(e))).forEach(e=>{g(kf(e))[ab.has(e[0])?'a':'w']++});
+ empsAt(day).filter(e=>sf(e[3])&&(!ft||ft(e))).forEach(e=>{g(kf(e))[ab.has(e[0])?'a':'w']++});
  resigned().filter(x=>x[7]===day&&sf(x[3])&&(!ft||ft(x))).forEach(x=>g(kf(x)).r++);return o}
-function ovCtl(){return `<div class="tb"><span class="k">Ngày:</span><input type="date" value="${st.day}" onchange="go('day',this.value)">${[['w','Đi làm'],['a','Nghỉ trong ngày'],['r','Nghỉ việc trong ngày']].map(([k,l])=>`<span style="display:flex;gap:5px;align-items:center"><i style="width:12px;height:12px;border-radius:3px;background:${CL[k]}"></i>${l}</span>`).join('')}</div>`}
+function ovCtl(){return `<div class="tb"><span class="k">Ngày:</span><input type="date" value="${st.day}" onchange="go('day',this.value)">${[['w','Đi làm'],['a','Nghỉ trong ngày'],['r','Nghỉ việc trong ngày']].map(([k,l])=>`<span style="display:flex;gap:5px;align-items:center"><i style="width:12px;height:12px;border-radius:3px;background:${CL[k]}"></i>${l}</span>`).join('')}<span class="note" style="flex-basis:100%;margin:0">Số liệu theo ngày đã chọn: chỉ tính người đã vào làm đến ngày đó và chưa nghỉ việc tại ngày đó.</span></div>`}
 function vstack(o){const m=Math.max(1,...Object.values(o).map(v=>v.w+v.a+v.r)),h=v=>`height:${v/m*80}px`;return `<div class="overview-line-chart-bars" style="display:flex;gap:6px;align-items:flex-end;height:130px;overflow-x:auto;padding-top:6px">${Object.entries(o).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`<div class="cl" title="${esc(k)}: đi làm ${v.w}, nghỉ ${v.a}, nghỉ việc ${v.r}" onclick="selectOverviewLine(${esc(JSON.stringify(k))})" style="flex:1;min-width:52px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><span style="font-size:11px;white-space:nowrap"><b style="color:${CL.w}">${v.w}</b>·<b style="color:${CL.a}">${v.a}</b>·<b style="color:${CL.r}">${v.r}</b></span><div style="width:68%;display:flex;flex-direction:column;margin-top:2px"><i style="${h(v.r)};background:${CL.r}"></i><i style="${h(v.a)};background:${CL.a}"></i><i style="${h(v.w)};background:${CL.w}"></i></div><span style="font-size:11px;color:var(--mu);margin-top:4px;text-align:center;line-height:1.2">${esc(k.replace('Line ',''))}</span></div>`).join('')}</div>`}
 function hstack(o){const T=v=>v.w+v.a+v.r,m=Math.max(1,...Object.values(o).map(T));return Object.entries(o).sort((a,b)=>T(b[1])-T(a[1])).map(([k,v])=>`<div class="bar" style="grid-template-columns:110px 1fr 92px"><span title="${esc(k)}">${esc(k)}</span><span class="t" style="display:flex;overflow:hidden">${['w','a','r'].map(c=>`<i style="width:${v[c]/m*100}%;min-width:0;border-radius:0;background:${CL[c]}"></i>`).join('')}</span><b style="font-size:12px"><span style="color:${CL.w}">${v.w}</span>·<span style="color:${CL.a}">${v.a}</span>·<span style="color:${CL.r}">${v.r}</span></b></div>`).join('')||'<div class="note">Không có dữ liệu</div>'}
 function vbars(o){const m=Math.max(1,...Object.values(o));return `<div style="display:flex;gap:6px;align-items:flex-end;height:220px;overflow-x:auto;padding-top:6px">${Object.entries(o).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`<div class="cl" title="${esc(k)}" onclick="goLine('${esc(k)}')" style="flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><b style="font-size:12px">${v}</b><i style="display:block;width:68%;border-radius:4px 4px 0 0;background:var(--bar);min-height:2px;height:${v/m*150}px"></i><span style="font-size:11px;color:var(--mu);margin-top:4px;text-align:center;line-height:1.2">${esc(k.replace('Line ',''))}</span></div>`).join('')}</div>`}
-function vOverview(){const all=emps(),a=all.filter(e=>st.sh.includes(e[3]));const t=cnt(a,e=>e[4]);const tv=a.filter(e=>e[4]==='Thời vụ');
+function vOverview(){const all=empsAt(st.day),a=all.filter(e=>st.sh.includes(e[3]));const t=cnt(a,e=>e[4]);const tv=a.filter(e=>e[4]==='Thời vụ');
  const chk=`<div class="tb"><span class="k">Hiển thị ca:</span>${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>`<label class="card" style="margin:0;padding:7px 12px;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.sh.includes(k)?'checked':''} onchange="tg('${k}')">${l}</label>`).join('')}</div>`;
  const mx={};a.forEach(e=>{const k=(e[4]||'(trống)')+'|'+e[3];mx[k]=(mx[k]||0)+1});
  const types=[...new Set(a.map(e=>e[4]||'(trống)'))];
@@ -158,7 +172,7 @@ function goLine(k){st.line=k;tab=1;render()}
 function closeOverviewLine(){st.ovLine='';st.ovLineQ='';render()}
 function vOverviewLineDetail(){
  if(!st.ovLine)return '';
- const all=emps().filter(e=>e[6]===st.ovLine&&sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
+ const all=empsAt(st.day).filter(e=>e[6]===st.ovLine&&sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
  const q=nz(st.ovLineQ||''),rows=all.filter(e=>!q||nz(e.join(' ')).includes(q));
  const gone=resigned().filter(e=>e[6]===st.ovLine&&e[7]===st.day&&sf(e[3]));
  return `<div class="card" style="margin-top:8px"><div class="tb" style="justify-content:space-between"><div><h3>Danh sách nhân viên theo line: ${esc(st.ovLine)}</h3><div class="note">Đang làm việc: ${rows.length}/${all.length} người theo các ca đang chọn.</div></div><button class="b g" onclick="closeOverviewLine()">Đóng danh sách</button></div><div class="tb"><input data-k="ovLineQ" placeholder="Tìm mã NV, họ tên, quản lý..." value="${esc(st.ovLineQ||'')}" oninput="inp('ovLineQ',this.value)" style="min-width:240px"></div>${tbl(eH,rows.map(eRow))}${gone.length?`<div style="margin-top:12px"><h3>Nhân viên nghỉ việc trong ngày ${fd(st.day)} trên line này: ${gone.length}</h3>`+tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Ngày nghỉ','Lý do'],gone.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),fd(e[7]),esc(e[8])||'<span class="note">(chưa ghi lý do)</span>']))+`</div>`:''}</div>`
@@ -514,7 +528,7 @@ function exportTabXlsx(){
  const act=emps(),res=resigned(),allL=leaves();
  let label=TABS[tab]||'Du_lieu';
  if(tab===0){
-  const visible=act.filter(e=>sf(e[3])),todayL=allL.filter(x=>x[7]===st.day&&sf(x[3]));
+  const visible=empsAt(st.day).filter(e=>sf(e[3])),todayL=allL.filter(x=>x[7]===st.day&&sf(x[3]));
   const from=new Date(st.day+'T00:00:00Z');from.setUTCDate(from.getUTCDate()-13);const start=from.toISOString().slice(0,10);
   sheet('Tong hop',['Chỉ tiêu','Số lượng'],[['Nhân viên đang làm theo ca chọn',visible.length],['Nghỉ ngày '+st.day,todayL.length],['Phép năm ngày quy đổi',todayL.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)]]);
   sheet('Nhan vien dang lam',eh,empRows(visible));
