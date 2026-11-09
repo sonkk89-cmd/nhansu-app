@@ -130,6 +130,8 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
         detail += ". ERP từ chối request; cần đối chiếu request này với request gốc của màn hình chấm công.";
       }
     }
+    const requestId = response.headers.get("x-frappe-request-id");
+    if (requestId) detail += ` (Mã yêu cầu ERP: ${requestId})`;
     throw Object.assign(new Error(detail), { status: 502 });
   }
   let payload: any;
