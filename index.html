@@ -43,7 +43,7 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
 <script>
 let D={E:[],R:[],L:[],me:{name:"",role:""}};
-const TABS=['Tổng quan','DS nhân viên','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị','TOP nhân lực nghỉ nhiều nhất','Lịch âm dương'];
+const TABS=['Tổng quan','DS nhân viên','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị','TOP nhân lực nghỉ nhiều nhất','Lịch âm dương','Chấm công'];
 const WD=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const CODE={P:'Phép năm (P)',"P/2":'Phép năm nửa ngày (P/2)',TD:'Nghỉ tự do (TD)',R:'Không lương (R)',RCC:'Không lương CC (RCC)',O:'Nghỉ ốm (O)',Stop:'Báo nghỉ việc',"ĐM":'Đi muộn'};
 const TYPES=['Chính thức','Thời vụ','Sinh viên'];
@@ -80,7 +80,7 @@ function tbl(h,rows,more){return `<div class="tw"><table><tr>${h.map(x=>`<th>${x
 function shiftKpi(a){const c=cnt(a,e=>e[3]),gs=r=>{const g=cnt(r,e=>{const n=nz(e[9]);return n==='nam'?'Nam':n==='nu'?'Nữ':'Khác'});return `Nam ${g.Nam||0} · Nữ ${g['Nữ']||0}${g['Khác']?' · Chưa rõ '+g['Khác']:''}`},s=k=>gs(a.filter(e=>e[3]===k));return kpi([['Tổng nhân lực',a.length,gs(a)],['Ca A',c.A||0,s('A')],['Ca C',c.C||0,s('C')],['Hành chính (HC)',c.HC||0,s('HC')]])}
 const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
 const eH=['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
-function setTab(i){tab=i;st.msg='';render();if(i===8)loadAdmin()}
+function setTab(i){tab=i;st.msg='';render();if(i===8)loadAdmin();if(i===11)loadCheckin()}
 function go(k,v){st[k]=v;render()}
 function inp(k,v){st[k]=v;const p=document.activeElement.selectionStart;render();const el=document.querySelector('[data-k="'+k+'"]');if(el){el.focus();try{el.setSelectionRange(p,p)}catch(e){}}}
 
@@ -268,6 +268,29 @@ function calChangeMonth(delta){const p=(st.calMonth||TD.slice(0,7)).split('-').m
 function calSelect(date){st.calSelected=date;render();}
 function calSide(tabName){st.calSide=tabName;render();}
 function vCalendar(){if(!st.calMonth)st.calMonth=TD.slice(0,7);if(!st.calSelected)st.calSelected=TD;const [y,m]=st.calMonth.split('-').map(Number),first=new Date(y,m-1,1),offset=(first.getDay()+6)%7,start=new Date(y,m-1,1-offset),days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return calDate(d.getFullYear(),d.getMonth()+1,d.getDate())}),sel=st.calSelected,l=solarToLunarCal(sel),events=calEvents(sel),monthName='Tháng '+m+' năm '+y,side=st.calSide||'Dương lịch';const daysHtml=days.map(date=>{const dt=new Date(date+'T00:00:00'),same=date.slice(0,7)===st.calMonth,ev=calEvents(date),lu=solarToLunarCal(date);return '<button class="cal-day '+(!same?'other ':'')+(date===TD?'today ':'')+(date===sel?'selected':'')+'" onclick="calSelect(\''+date+'\')"><span class="solar">'+Number(date.slice(8,10))+'</span><span class="lunar">'+lu.day+'/'+lu.month+(lu.leap?' nhuận':'')+'</span>'+(ev.length?'<span class="event-dot">'+esc(ev[0])+'</span>':'')+'</button>'}).join('');const eventRows=(arr)=>arr.length?arr.map(e=>'<div class="cal-info-row">'+e+'</div>').join(''):'<div class="note">Không có sự kiện nổi bật trong ngày này.</div>';const right=side==='Dương lịch'?'<h3>Sự kiện dương lịch '+fd(sel)+'</h3>'+eventRows(events.filter((_,i)=>i===0)):side==='Âm lịch'?'<h3>Thông tin âm lịch</h3><div class="cal-info-row"><b>'+l.day+'/'+l.month+'/'+l.year+(l.leap?' (tháng nhuận)':'')+'</b>Ngày âm lịch</div><div class="cal-info-row">Ngày '+WD[new Date(sel+'T00:00:00').getDay()]+'</div>'+eventRows(events.filter((_,i)=>i===1)): '<h3>Ngày lễ / sự kiện</h3>'+eventRows(events);return '<div class="card"><div class="tb" style="justify-content:space-between"><div><h2 style="margin:0;font-size:19px">LỊCH ÂM DƯƠNG</h2><div class="note">Lịch Việt Nam · Múi giờ UTC+7</div></div><div class="tb"><button class="b g" onclick="st.calSelected=TD;st.calMonth=TD.slice(0,7);render()">Hôm nay</button><button class="b g" onclick="st.calView=\'week\';render()">Lịch tuần</button><button class="b" onclick="st.calView=\'month\';render()">Lịch tháng</button><button class="b g" onclick="st.calView=\'year\';render()">Lịch năm</button></div></div><div class="cal-summary"><div><small>THÁNG DƯƠNG LỊCH</small><b>'+m+'/'+y+'</b></div><div><small>THÁNG ÂM LỊCH</small><b>Tháng '+l.month+'/'+l.year+'</b></div><div><small>NGÀY ĐANG CHỌN</small><b>'+fd(sel)+'</b></div></div></div><div class="calendar-shell"><section class="cal-card"><div class="cal-head"><button onclick="calChangeMonth(-1)">‹ Tháng trước</button><b>'+monthName+'</b><button onclick="calChangeMonth(1)">Tháng sau ›</button></div><div class="cal-grid">'+['T2','T3','T4','T5','T6','T7','CN'].map(x=>'<div class="cal-weekday">'+x+'</div>').join('')+daysHtml+'</div><div class="note" style="padding:0 12px 12px">Ngày dương hiển thị lớn, ngày âm hiển thị nhỏ bên dưới. Chọn một ngày để xem thông tin bên phải.</div></section><aside class="cal-card"><div class="cal-side-tabs">'+['Dương lịch','Âm lịch','Nghỉ lễ'].map(x=>'<button class="'+(side===x?'on':'')+'" onclick="calSide(\''+x+'\')">'+x+'</button>').join('')+'</div><div class="cal-info">'+right+'</div></aside></div>';}
+async function loadCheckin(date=st.ckDate||TD){
+ if(!date)return;
+ st.ckDate=date;st.ckLoading=true;st.ckError='';render();
+ try{
+  const r=await HRCloud.api('/api/checkins/live?date='+encodeURIComponent(date));
+  if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
+  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Không tải được dữ liệu chấm công')}
+  st.checkins=await r.json();st.ckError=''
+ }catch(e){st.ckError=String(e?.message||'Không kết nối được máy chủ');st.checkins=null}
+ st.ckLoading=false;render();
+}
+function vCheckin(){
+ const day=st.ckDate||TD,head='<div class="tb"><label>Ngày xem <input id="ckDate" type="date" value="'+esc(day)+'" onchange="loadCheckin(this.value)"></label><button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button></div>';
+ if(st.ckLoading)return head+'<div class="note">Đang lấy dữ liệu trực tiếp từ hệ thống chấm công...</div>';
+ const rows=st.checkins?.rows||[],q=nz(st.ckQ||''),filtered=q?rows.filter(r=>nz([r.emp_id,r.emp_name,r.department].join(' ')).includes(q)):rows;
+ const checkedIn=rows.filter(r=>r.first_checkin_time).length,notIn=rows.length-checkedIn;
+ const at=st.checkins?.fetched_at?new Date(st.checkins.fetched_at).toLocaleString('vi-VN'):'';
+ const kp=kpi([['Tổng nhân viên',rows.length],['Đã ghi nhận đi làm',checkedIn],['Chưa check-in',notIn],['Tỷ lệ đã check-in',((rows.length?checkedIn/rows.length:0)*100).toFixed(1)+'%']]);
+ return head+(st.ckError?'<div class="note" style="color:var(--er)">'+esc(st.ckError)+'</div>':'')+(st.checkins?'<div class="note" style="margin:0 0 8px">Dữ liệu ngày <b>'+fd(st.checkins.date||day)+'</b> · truy vấn trực tiếp lúc '+esc(at)+'</div><div class="note">Chỉ hiển thị trong ngày bạn chọn, không lưu lịch sử vào cơ sở dữ liệu. “Chưa check-in” cần đối chiếu trước khi kết luận nghỉ.</div>'+kp:'')+
+ '<div class="tb"><input data-k="ckQ" placeholder="Tìm mã NV, tên, phòng ban..." value="'+esc(st.ckQ||'')+'" oninput="inp(\'ckQ\',this.value)" style="min-width:260px"></div>'+
+ tbl(['Mã NV','Họ tên','Phòng ban','Ca','Giờ check-in','Trạng thái'],filtered.map(r=>[esc(r.emp_id),esc(r.emp_name),esc(r.department),esc(r.shift),r.first_checkin_time?esc(String(r.first_checkin_time).replace('T',' ')):'','<span style="color:'+(r.first_checkin_time?'var(--ok)':'var(--wr)')+'">'+(r.first_checkin_time?'Đã check-in':'Chưa ghi nhận check-in')+'</span>']))+
+ '';
+}
 function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x=>(x[7]||'').slice(0,7)).filter(Boolean))].sort().reverse();
  const f=a.filter(x=>(!st.rm||(x[7]||'').startsWith(st.rm))&&(!st.rt||x[4]===st.rt)&&(!st.rq||nz(x.join(' ')).includes(nz(st.rq))));
  const bm=cnt(f.filter(x=>x[7]),x=>x[7].slice(0,7)),mk=Object.keys(bm).sort().slice(-8),wd=cnt(f.filter(x=>x[7]),x=>wdOf(x[7]));
@@ -571,6 +594,10 @@ function exportTabXlsx(){
   sheet('Kiem tra',['Hạng mục','Số lượng','Ví dụ'],((st.checks||{}).items||[]).map(i=>[i.label,i.count,(i.sample||[]).join(' · ')]));
   sheet('Lich su nhap',['Thời gian','Người nhập','File','Nhân viên mới','Nghỉ việc','Nghỉ ngày','Lỗi bỏ qua'],(st.imps||[]).map(i=>[i.at,i.user,i.file,i.summary?.ok?.adds||0,i.summary?.ok?.res||0,i.summary?.ok?.leaves||0,i.summary?.errors||0]));
   sheet('Nhat ky',['Thời gian','Người thực hiện','Thao tác','Chi tiết'],(st.audit||[]).map(i=>[i.at,i.user,ACTL[i.action]||i.action,i.detail]));label='Quan_tri';
+ }else if(tab===11){
+  const rows=(st.checkins&&st.checkins.rows)||[];
+  sheet('Cham cong',['Mã NV','Họ tên','Phòng ban','Ca','Giờ check-in','Trạng thái'],rows.map(r=>[r.emp_id,r.emp_name,r.department,r.shift,r.first_checkin_time||'',r.first_checkin_time?'Đã check-in':'Chưa ghi nhận check-in']));
+  label='Cham_cong_'+(st.ckDate||TD);
  }
  const date=new Date().toISOString().slice(0,10);
  XLSX.writeFile(wb,'bao_cao_'+label+'_'+date+'.xlsx');
@@ -633,7 +660,8 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
 async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}D=await r.json();if(Array.isArray(D.L))D.L=D.L.map(x=>{if(Array.isArray(x)&&x[7])x[7]=String(x[7]).slice(0,10);return x});$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){$('sub').textContent='Lỗi tải dữ liệu từ máy chủ: '+String(e?.message||e||'Lỗi không xác định')}}
 function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===8&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc · '+(D.L||[]).length+' lượt nghỉ đã tải';
- const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin,vTopLeave,vCalendar][tab]();}
+ const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin,vTopLeave,vCalendar,vCheckin][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
 </script></body></html>
 <!-- GitHub Pages redeploy trigger: overview UI update -->
+
