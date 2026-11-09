@@ -67,6 +67,50 @@ function dateValue(v: unknown) {
   const d = new Date(`${iso}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : "";
 }
+async function fetchLiveCheckins(date: string) {
+  const cookie = Deno.env.get("ILSUNGTECH_COOKIE") || "";
+  const csrfToken = Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "";
+  if (!cookie) throw Object.assign(new Error("Chưa cấu hình kết nối hệ thống chấm công (ILSUNGTECH_COOKIE)"), { status: 503 });
+  const baseUrl = (Deno.env.get("ILSUNGTECH_BASE_URL") || "https://next.il-sungtech.com").replace(/\/$/, "");
+  const body = new URLSearchParams({
+    target_date: date,
+    shift_type: "",
+    work_shift: Deno.env.get("ILSUNGTECH_WORK_SHIFT") || "day",
+    departments: "[]",
+    include_completed_for_closed_sessions: "1",
+    force_refresh: "0",
+  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "Accept": "application/json",
+    "Cookie": cookie,
+    "X-Requested-With": "XMLHttpRequest",
+  };
+  if (csrfToken) headers["X-Frappe-Csrf-Token"] = csrfToken;
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/method/ilsungtech_erp.timesheet_calculator.get_headcount_stats`, {
+      method: "POST", headers, body: body.toString(), signal: AbortSignal.timeout(25000),
+    });
+  } catch {
+    throw Object.assign(new Error("Không kết nối được hệ thống chấm công nội bộ"), { status: 502 });
+  }
+  if (!response.ok) throw Object.assign(new Error(`Hệ thống chấm công trả về HTTP ${response.status}; phiên kết nối có thể đã hết hạn`), { status: 502 });
+  let payload: any;
+  try { payload = await response.json(); }
+  catch { throw Object.assign(new Error("Phiên nguồn có thể hết hạn hoặc phản hồi không phải JSON"), { status: 502 }); }
+  const list = payload?.message?.total_list;
+  if (!Array.isArray(list)) throw Object.assign(new Error("Phản hồi hệ thống chấm công không có danh sách nhân viên"), { status: 502 });
+  const rows = list.map((e: any) => ({
+    emp_id: String(e.employee ?? "").trim(),
+    emp_name: String(e.employee_name ?? "").trim(),
+    department: String(e.department ?? "").trim(),
+    shift: String(e.custom_shift ?? "").trim(),
+    first_checkin_time: e.first_checkin_time || "",
+  })).filter((e: any) => e.emp_id);
+  const checkedIn = rows.filter((e: any) => Boolean(e.first_checkin_time)).length;
+  return { date, rows, total: rows.length, checkedIn, noCheckin: rows.length - checkedIn, fetched_at: new Date().toISOString() };
+}
 async function validateImport(body: any) {
   const [er, leaveRows] = await Promise.all([
     admin.from("employees").select("*"),
@@ -220,6 +264,12 @@ Deno.serve(async req => {
       requireRole(user, ["admin", "editor"]); const body = await req.json();
       const { data, error } = await admin.rpc("hr_apply_delta", { p_body: body, p_username: user.username });
       if (error) throw error; return reply(data, 200, origin);
+    }
+    if (method === "GET" && route === "/api/checkins/live") {
+      const requestedDate = dateValue(url.searchParams.get("date"));
+      if (!requestedDate) return fail("Chọn ngày chấm công hợp lệ (YYYY-MM-DD)", 400, origin);
+      const report = await fetchLiveCheckins(requestedDate);
+      return reply(report, 200, origin);
     }
     if (method === "DELETE" && route.startsWith("/api/employees/")) {
       requireRole(user, ["admin"]);
