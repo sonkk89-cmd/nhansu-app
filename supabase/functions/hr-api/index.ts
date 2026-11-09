@@ -103,21 +103,28 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   }
   if (!response.ok) {
     let detail = `Hệ thống chấm công trả về HTTP ${response.status}`;
-    let upstreamText = "";
-    try { upstreamText = (await response.text()).slice(0, 400).toLowerCase(); } catch { /* body unavailable */ }
+    let upstreamText = "", exceptionType = "";
+    try {
+      const raw = (await response.text()).slice(0, 2000);
+      upstreamText = raw.toLowerCase();
+      const parsed = JSON.parse(raw);
+      exceptionType = String(parsed?.exc_type || parsed?.exception || "").split(":")[0]
+        .replace(/[^A-Za-z0-9_.]/g, "").slice(0, 80);
+    } catch { /* keep only status if ERP did not return JSON */ }
+    if (exceptionType) detail += ` (${exceptionType})`;
     if (response.status === 400) {
-      detail += ". ERP từ chối tham số yêu cầu; kiểm tra ngày, ca làm việc, Cookie và CSRF token.";
+      detail += ". ERP từ chối tham số yêu cầu; cần đối chiếu payload với request gốc trên trang chấm công.";
     } else if (response.status === 401) {
-      detail += ". Cookie đăng nhập đã hết hạn hoặc không thuộc đúng hệ thống.";
+      detail += ". ERP không xác thực phiên; kiểm tra Cookie và CSRF token được lấy từ cùng phiên đăng nhập.";
     } else if (response.status === 403) {
-      if (/csrf/.test(upstreamText)) {
+      if (/csrf/.test(upstreamText) || /csrf/i.test(exceptionType)) {
         detail += ". ERP báo CSRF không hợp lệ; lấy lại Cookie và X-Frappe-Csrf-Token trong cùng một phiên đăng nhập.";
-      } else if (/permission|not permitted|not allowed|forbidden|insufficient rights/.test(upstreamText)) {
-        detail += ". Tài khoản ERP không có quyền xem báo cáo chấm công.";
-      } else if (/login|session|authentication|unauthorized/.test(upstreamText)) {
-        detail += ". Cookie đăng nhập đã hết hạn; đăng nhập lại ERP rồi cập nhật Cookie và CSRF token cùng phiên.";
+      } else if (/permission|not permitted|not allowed|forbidden|insufficient rights/.test(upstreamText) || /permission/i.test(exceptionType)) {
+        detail += ". ERP từ chối quyền của API hoặc dữ liệu mà API truy cập; việc mở được màn hình chưa xác nhận API này có cùng quyền.";
+      } else if (/login|session|authentication|unauthorized/.test(upstreamText) || /auth/i.test(exceptionType)) {
+        detail += ". ERP không chấp nhận phiên đăng nhập; cập nhật Cookie và CSRF token mới từ cùng phiên.";
       } else {
-        detail += ". ERP từ chối quyền truy cập; kiểm tra Cookie và CSRF token cùng phiên, sau đó xác nhận tài khoản có quyền xem báo cáo.";
+        detail += ". ERP từ chối request; cần đối chiếu request này với request gốc của màn hình chấm công.";
       }
     }
     throw Object.assign(new Error(detail), { status: 502 });
