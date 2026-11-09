@@ -90,6 +90,9 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     "Accept": "application/json",
     "Cookie": cookie,
+    "Origin": baseUrl,
+    "Referer": `${baseUrl}/desk/visitor-management/daily-manpower-control`,
+    "X-Frappe-Cmd": "",
     "X-Requested-With": "XMLHttpRequest",
   };
   if (csrfToken) headers["X-Frappe-Csrf-Token"] = csrfToken;
