@@ -38,6 +38,12 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 .bar.wk{grid-template-columns:20px 100px 1fr 40px;cursor:pointer;padding:4px 6px;border:1.5px solid transparent;border-radius:7px}
 .bar.wk.sel{border-color:var(--pr);background:var(--pl)}
 .bar.wk input{width:16px;height:16px;margin:0;padding:0;min-width:0}
+.checkin-hero{background:linear-gradient(120deg,#123a78,#2871c8);color:#fff;border:0;box-shadow:0 8px 22px rgba(30,80,162,.2)}
+.checkin-hero h2{margin:0;font-size:18px;letter-spacing:.02em;color:#fff}.checkin-hero .note{color:#dbeafe;margin:3px 0 0}
+.checkin-summary .card{border:0;border-left:4px solid var(--pr);box-shadow:0 5px 15px rgba(20,50,90,.07)}.checkin-summary .card:nth-child(1){border-left-color:var(--ok)}.checkin-summary .card:nth-child(2){border-left-color:var(--er)}.checkin-summary .card:nth-child(3){border-left-color:#3b82f6}
+.checkin-pivot-card{border-top:3px solid #3b82f6}.checkin-pivot-card th{background:#eaf2ff;color:#315780}.checkin-off{color:var(--er);font-weight:700}.checkin-work{color:var(--ok);font-weight:700}.checkin-badge{display:inline-block;border-radius:999px;padding:3px 9px;background:#e8f7f0;color:#08754f;font-size:11px;font-weight:700}.checkin-badge.off{background:#fff0f0;color:#b42318}
+.checkin-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.checkin-toolbar label{font-size:12px;color:var(--mu);font-weight:600}
+@media(max-width:600px){.checkin-hero{padding:12px}.checkin-hero h2{font-size:16px}.checkin-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.checkin-summary .card{padding:8px}.checkin-summary .v{font-size:20px}}
 </style></head><body>
 <header class="topbar"><div class="topbar-in"><div class="brand-mark">Production - ILS</div><div class="head-copy"><h1>Báo cáo nhân sự – Bộ phận sản xuất</h1><div class="sub" id="sub"></div></div><div class="account"><span id="me"></span> · <a href="#" onclick="HRCloud.logout(event)">Đăng xuất</a></div></div></header>
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
@@ -272,24 +278,39 @@ async function loadCheckin(date=st.ckDate||TD){
  if(!date)return;
  st.ckDate=date;st.ckLoading=true;st.ckError='';render();
  try{
-  const r=await HRCloud.api('/api/checkins/live?date='+encodeURIComponent(date));
+  const employeeIds=[...new Set((D.E||[]).map(e=>String(e[0]||'').trim()).filter(Boolean))];
+  const r=await HRCloud.api('/api/checkins/live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,employeeIds})});
   if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
-  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Không tải được dữ liệu chấm công')}
+  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(r.status===404?'API chấm công trực tiếp chưa được triển khai trên Supabase.':(j.error||'Không tải được dữ liệu chấm công'))}
   st.checkins=await r.json();st.ckError=''
  }catch(e){st.ckError=String(e?.message||'Không kết nối được máy chủ');st.checkins=null}
  st.ckLoading=false;render();
 }
+function checkinRows(){
+ const source=new Map((st.checkins?.rows||[]).map(r=>[String(r.emp_id),r])),q=nz(st.ckQ||''),shift=st.ckShift||'All';
+ return (D.E||[]).map(e=>{
+  const id=String(e[0]||'').trim(),hit=source.get(id),time=String(hit?.first_checkin_time||''),type=String(e[4]||'').trim();
+  return {emp_id:id,emp_name:String(e[1]||''),vendor:String(e[5]||'').trim()||type||'Chưa phân loại',line:String(e[6]||''),shift:String(e[3]||''),first_checkin_time:time,status:time?'Đi làm':'OFF'};
+ }).filter(r=>r.emp_id&& (shift==='All'||r.shift===shift) && (!q||nz([r.emp_id,r.emp_name,r.vendor,r.line,r.shift].join(' ')).includes(q)));
+}
+function checkinPivot(rows){
+ const groups={};rows.forEach(r=>{const key=r.vendor||'Chưa phân loại';groups[key]||={work:0,off:0,total:0};groups[key][r.first_checkin_time?'work':'off']++;groups[key].total++});
+ const items=Object.entries(groups).sort((a,b)=>b[1].total-a[1].total||a[0].localeCompare(b[0],'vi'));
+ const work=rows.filter(r=>r.first_checkin_time).length,off=rows.length-work;
+ return {work,off,total:rows.length,items};
+}
 function vCheckin(){
- const day=st.ckDate||TD,head='<div class="tb"><label>Ngày xem <input id="ckDate" type="date" value="'+esc(day)+'" onchange="loadCheckin(this.value)"></label><button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button></div>';
- if(st.ckLoading)return head+'<div class="note">Đang lấy dữ liệu trực tiếp từ hệ thống chấm công...</div>';
- const rows=st.checkins?.rows||[],q=nz(st.ckQ||''),filtered=q?rows.filter(r=>nz([r.emp_id,r.emp_name,r.department].join(' ')).includes(q)):rows;
- const checkedIn=rows.filter(r=>r.first_checkin_time).length,notIn=rows.length-checkedIn;
- const at=st.checkins?.fetched_at?new Date(st.checkins.fetched_at).toLocaleString('vi-VN'):'';
- const kp=kpi([['Tổng nhân viên',rows.length],['Đã ghi nhận đi làm',checkedIn],['Chưa check-in',notIn],['Tỷ lệ đã check-in',((rows.length?checkedIn/rows.length:0)*100).toFixed(1)+'%']]);
- return head+(st.ckError?'<div class="note" style="color:var(--er)">'+esc(st.ckError)+'</div>':'')+(st.checkins?'<div class="note" style="margin:0 0 8px">Dữ liệu ngày <b>'+fd(st.checkins.date||day)+'</b> · truy vấn trực tiếp lúc '+esc(at)+'</div><div class="note">Chỉ hiển thị trong ngày bạn chọn, không lưu lịch sử vào cơ sở dữ liệu. “Chưa check-in” cần đối chiếu trước khi kết luận nghỉ.</div>'+kp:'')+
- '<div class="tb"><input data-k="ckQ" placeholder="Tìm mã NV, tên, phòng ban..." value="'+esc(st.ckQ||'')+'" oninput="inp(\'ckQ\',this.value)" style="min-width:260px"></div>'+
- tbl(['Mã NV','Họ tên','Phòng ban','Ca','Giờ check-in','Trạng thái'],filtered.map(r=>[esc(r.emp_id),esc(r.emp_name),esc(r.department),esc(r.shift),r.first_checkin_time?esc(String(r.first_checkin_time).replace('T',' ')):'','<span style="color:'+(r.first_checkin_time?'var(--ok)':'var(--wr)')+'">'+(r.first_checkin_time?'Đã check-in':'Chưa ghi nhận check-in')+'</span>']))+
- '';
+ const day=st.ckDate||TD,at=st.checkins?.fetched_at?new Date(st.checkins.fetched_at).toLocaleString('vi-VN'):'';
+ const head=`<div class="card checkin-hero"><div class="tb" style="justify-content:space-between;margin:0"><div><h2>CHẤM CÔNG SẢN XUẤT</h2><div class="note">Đối chiếu danh sách nhân viên trong tab DS nhân viên với giờ vào trong ngày</div></div><div class="checkin-toolbar"><label>Ngày <input id="ckDate" type="date" value="${esc(day)}" onchange="loadCheckin(this.value)"></label><label>Ca <select onchange="st.ckShift=this.value;render()"><option value="All" ${!st.ckShift||st.ckShift==='All'?'selected':''}>Tất cả ca</option><option value="A" ${st.ckShift==='A'?'selected':''}>Ca A</option><option value="C" ${st.ckShift==='C'?'selected':''}>Ca C</option><option value="HC" ${st.ckShift==='HC'?'selected':''}>HC</option></select></label><button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button></div></div></div>`;
+ if(st.ckLoading)return head+'<div class="card"><div class="note">Đang lấy dữ liệu trực tiếp từ hệ thống chấm công...</div></div>';
+ if(st.ckError)return head+'<div class="card"><div class="msg e">'+esc(st.ckError)+'</div></div>';
+ if(!st.checkins)return head+'<div class="card"><div class="note">Chọn ngày để tải dữ liệu chấm công.</div></div>';
+ const rows=checkinRows(),pivot=checkinPivot(rows),q=st.ckQ||'';
+ const pivotRows=pivot.items.map(([name,x])=>[esc(name),'<b class="checkin-work">'+x.work+'</b>','<b class="checkin-off">'+x.off+'</b>','<b>'+x.total+'</b>']);
+ pivotRows.push(['<b>TỔNG CỘNG</b>','<b class="checkin-work">'+pivot.work+'</b>','<b class="checkin-off">'+pivot.off+'</b>','<b>'+pivot.total+'</b>']);
+ const summary=kpi([['ĐI LÀM',pivot.work],['OFF',pivot.off],['TỔNG NHÂN VIÊN',pivot.total]]);
+ const detail=tbl(['Mã NV','Họ tên','Nhóm Vendor / Loại','Line','Ca','Giờ vào','Trạng thái'],rows.map(r=>[esc(r.emp_id),esc(r.emp_name),esc(r.vendor),esc(r.line),esc(r.shift),r.first_checkin_time?esc(String(r.first_checkin_time).replace('T',' ')):'<span class="note">—</span>',r.first_checkin_time?'<span class="checkin-badge">Đi làm</span>':'<span class="checkin-badge off">OFF</span>']));
+ return head+'<div class="note">Ngày '+fd(st.checkins.date||day)+' · lấy trực tiếp lúc '+esc(at)+' · chỉ gồm nhân viên có trong DS nhân viên của app; không lưu lịch sử.</div><div class="note">OFF = nhân viên trong DS nhân viên chưa có giờ check-in ở nguồn trong ngày đã chọn.</div><div class="checkin-summary">'+summary+'</div><div class="card checkin-pivot-card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Tổng hợp theo Vendor / loại nhân lực</h3><div class="note">Bảng tổng hợp dạng Pivot theo ca đang chọn</div></div><span class="tag">'+(st.ckShift&&st.ckShift!=='All'?'Ca '+esc(st.ckShift):'Tất cả ca')+'</span></div>'+tbl(['Vendor / Loại nhân lực','Đi làm','OFF','Grand Total'],pivotRows)+'</div><div class="card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Danh sách sản xuất và giờ vào</h3><div class="note">'+rows.length+' nhân viên theo bộ lọc hiện tại</div></div><input data-k="ckQ" placeholder="Tìm mã NV, tên, Vendor, Line..." value="'+esc(q)+'" oninput="inp(\'ckQ\',this.value)" style="min-width:250px"></div>'+detail+'</div>';
 }
 function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x=>(x[7]||'').slice(0,7)).filter(Boolean))].sort().reverse();
  const f=a.filter(x=>(!st.rm||(x[7]||'').startsWith(st.rm))&&(!st.rt||x[4]===st.rt)&&(!st.rq||nz(x.join(' ')).includes(nz(st.rq))));
@@ -595,8 +616,9 @@ function exportTabXlsx(){
   sheet('Lich su nhap',['Thời gian','Người nhập','File','Nhân viên mới','Nghỉ việc','Nghỉ ngày','Lỗi bỏ qua'],(st.imps||[]).map(i=>[i.at,i.user,i.file,i.summary?.ok?.adds||0,i.summary?.ok?.res||0,i.summary?.ok?.leaves||0,i.summary?.errors||0]));
   sheet('Nhat ky',['Thời gian','Người thực hiện','Thao tác','Chi tiết'],(st.audit||[]).map(i=>[i.at,i.user,ACTL[i.action]||i.action,i.detail]));label='Quan_tri';
  }else if(tab===11){
-  const rows=(st.checkins&&st.checkins.rows)||[];
-  sheet('Cham cong',['Mã NV','Họ tên','Phòng ban','Ca','Giờ check-in','Trạng thái'],rows.map(r=>[r.emp_id,r.emp_name,r.department,r.shift,r.first_checkin_time||'',r.first_checkin_time?'Đã check-in':'Chưa ghi nhận check-in']));
+  const rows=checkinRows(),pv=checkinPivot(rows);
+  sheet('Pivot cham cong',['Vendor / Loại nhân lực','Đi làm','OFF','Grand Total'],[...pv.items.map(([k,v])=>[k,v.work,v.off,v.total]),['TỔNG CỘNG',pv.work,pv.off,pv.total]]);
+  sheet('Danh sach san xuat',['Mã NV','Họ tên','Vendor / Loại','Line','Ca','Giờ vào','Trạng thái'],rows.map(r=>[r.emp_id,r.emp_name,r.vendor,r.line,r.shift,r.first_checkin_time||'',r.status]));
   label='Cham_cong_'+(st.ckDate||TD);
  }
  const date=new Date().toISOString().slice(0,10);
