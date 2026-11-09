@@ -103,10 +103,22 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   }
   if (!response.ok) {
     let detail = `Hệ thống chấm công trả về HTTP ${response.status}`;
+    let upstreamText = "";
+    try { upstreamText = (await response.text()).slice(0, 400).toLowerCase(); } catch { /* body unavailable */ }
     if (response.status === 400) {
-      detail += ". Kiểm tra secret ILSUNGTECH_COOKIE chỉ chứa giá trị Cookie (không kèm nhãn Cookie:), đúng hệ thống next.il-sungtech.com; nếu vẫn lỗi, cần cập nhật CSRF token theo request mới nhất.";
-    } else if (response.status === 401 || response.status === 403) {
-      detail += ". Phiên đăng nhập có thể hết hạn hoặc tài khoản ERP chưa có quyền xem báo cáo.";
+      detail += ". ERP từ chối tham số yêu cầu; kiểm tra ngày, ca làm việc, Cookie và CSRF token.";
+    } else if (response.status === 401) {
+      detail += ". Cookie đăng nhập đã hết hạn hoặc không thuộc đúng hệ thống.";
+    } else if (response.status === 403) {
+      if (/csrf/.test(upstreamText)) {
+        detail += ". ERP báo CSRF không hợp lệ; lấy lại Cookie và X-Frappe-Csrf-Token trong cùng một phiên đăng nhập.";
+      } else if (/permission|not permitted|not allowed|forbidden|insufficient rights/.test(upstreamText)) {
+        detail += ". Tài khoản ERP không có quyền xem báo cáo chấm công.";
+      } else if (/login|session|authentication|unauthorized/.test(upstreamText)) {
+        detail += ". Cookie đăng nhập đã hết hạn; đăng nhập lại ERP rồi cập nhật Cookie và CSRF token cùng phiên.";
+      } else {
+        detail += ". ERP từ chối quyền truy cập; kiểm tra Cookie và CSRF token cùng phiên, sau đó xác nhận tài khoản có quyền xem báo cáo.";
+      }
     }
     throw Object.assign(new Error(detail), { status: 502 });
   }
