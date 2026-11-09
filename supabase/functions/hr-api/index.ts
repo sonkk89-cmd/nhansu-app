@@ -67,7 +67,7 @@ function dateValue(v: unknown) {
   const d = new Date(`${iso}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : "";
 }
-async function fetchLiveCheckins(date: string) {
+async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   const cookie = Deno.env.get("ILSUNGTECH_COOKIE") || "";
   const csrfToken = Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "";
   if (!cookie) throw Object.assign(new Error("Chưa cấu hình kết nối hệ thống chấm công (ILSUNGTECH_COOKIE)"), { status: 503 });
@@ -101,13 +101,15 @@ async function fetchLiveCheckins(date: string) {
   catch { throw Object.assign(new Error("Phiên nguồn có thể hết hạn hoặc phản hồi không phải JSON"), { status: 502 }); }
   const list = payload?.message?.total_list;
   if (!Array.isArray(list)) throw Object.assign(new Error("Phản hồi hệ thống chấm công không có danh sách nhân viên"), { status: 502 });
+  const allowedIds = new Set(employeeIds);
   const rows = list.map((e: any) => ({
     emp_id: String(e.employee ?? "").trim(),
     emp_name: String(e.employee_name ?? "").trim(),
     department: String(e.department ?? "").trim(),
     shift: String(e.custom_shift ?? "").trim(),
     first_checkin_time: e.first_checkin_time || "",
-  })).filter((e: any) => e.emp_id);
+    operation: String(e.operation ?? "").trim(),
+  })).filter((e: any) => e.emp_id && allowedIds.has(e.emp_id));
   const checkedIn = rows.filter((e: any) => Boolean(e.first_checkin_time)).length;
   return { date, rows, total: rows.length, checkedIn, noCheckin: rows.length - checkedIn, fetched_at: new Date().toISOString() };
 }
@@ -265,10 +267,16 @@ Deno.serve(async req => {
       const { data, error } = await admin.rpc("hr_apply_delta", { p_body: body, p_username: user.username });
       if (error) throw error; return reply(data, 200, origin);
     }
-    if (method === "GET" && route === "/api/checkins/live") {
-      const requestedDate = dateValue(url.searchParams.get("date"));
+    if (method === "POST" && route === "/api/checkins/live") {
+      const body = await req.json().catch(() => ({}));
+      const requestedDate = dateValue(body.date);
       if (!requestedDate) return fail("Chọn ngày chấm công hợp lệ (YYYY-MM-DD)", 400, origin);
-      const report = await fetchLiveCheckins(requestedDate);
+      const employeeIds = Array.isArray(body.employeeIds)
+        ? [...new Set(body.employeeIds.map((id: unknown) => String(id ?? "").trim()).filter(Boolean))]
+        : [];
+      if (employeeIds.length > 5000) return fail("Danh sách nhân viên vượt giới hạn xử lý", 400, origin);
+      if (!employeeIds.length) return reply({ date: requestedDate, rows: [], total: 0, checkedIn: 0, noCheckin: 0, fetched_at: new Date().toISOString() }, 200, origin);
+      const report = await fetchLiveCheckins(requestedDate, employeeIds);
       return reply(report, 200, origin);
     }
     if (method === "DELETE" && route.startsWith("/api/employees/")) {
