@@ -71,7 +71,7 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   const cookie = Deno.env.get("ILSUNGTECH_COOKIE") || "";
   const csrfToken = Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "";
   if (!cookie) throw Object.assign(new Error("Chưa cấu hình kết nối hệ thống chấm công (ILSUNGTECH_COOKIE)"), { status: 503 });
-  const baseUrl = (Deno.env.get("ILSUNGTECH_BASE_URL") || "https://next.il-sungtech.com").replace(/\/$/, "");
+  const baseUrl = (Deno.env.get("ILSUNGTECH_BASE_URL") || "https://next.il-sungtech.com").replace(/\/+$/, "");
   const body = new URLSearchParams({
     target_date: date,
     shift_type: "",
@@ -220,7 +220,7 @@ Deno.serve(async req => {
       ]);
       if (a.error || r.error) throw a.error || r.error;
       const rowE = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.title,e.manager,e.gender];
-      const rowR = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.resign_date,e.resign_reason,1];
+      const rowR = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.resign_date,e.resign_reason,1,e.title,e.manager,e.gender];
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
       return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: leaveRows.map(rowL) }, 200, origin);
     }
@@ -384,4 +384,3 @@ Deno.serve(async req => {
     return fail((e as any)?.message || "Lỗi máy chủ", status, origin);
   }
 });
-
