@@ -312,16 +312,51 @@ function vCheckin(){
  const detail=tbl(['Mã NV','Họ tên','Nhóm Vendor / Loại','Line','Ca','Giờ vào','Trạng thái'],rows.map(r=>[esc(r.emp_id),esc(r.emp_name),esc(r.vendor),esc(r.line),esc(r.shift),r.first_checkin_time?esc(String(r.first_checkin_time).replace('T',' ')):'<span class="note">—</span>',r.first_checkin_time?'<span class="checkin-badge">Đi làm</span>':'<span class="checkin-badge off">OFF</span>']));
  return head+'<div class="note">Ngày '+fd(st.checkins.date||day)+' · lấy trực tiếp lúc '+esc(at)+' · chỉ gồm nhân viên có trong DS nhân viên của app; không lưu lịch sử.</div><div class="note">OFF = nhân viên trong DS nhân viên chưa có giờ check-in ở nguồn trong ngày đã chọn.</div><div class="checkin-summary">'+summary+'</div><div class="card checkin-pivot-card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Tổng hợp theo Vendor / loại nhân lực</h3><div class="note">Bảng tổng hợp dạng Pivot theo ca đang chọn</div></div><span class="tag">'+(st.ckShift&&st.ckShift!=='All'?'Ca '+esc(st.ckShift):'Tất cả ca')+'</span></div>'+tbl(['Vendor / Loại nhân lực','Đi làm','OFF','Grand Total'],pivotRows)+'</div><div class="card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Danh sách sản xuất và giờ vào</h3><div class="note">'+rows.length+' nhân viên theo bộ lọc hiện tại</div></div><input data-k="ckQ" placeholder="Tìm mã NV, tên, Vendor, Line..." value="'+esc(q)+'" oninput="inp(\'ckQ\',this.value)" style="min-width:250px"></div>'+detail+'</div>';
 }
-function vResign(){const a=resigned().filter(x=>sf(x[3])),ms=[...new Set(a.map(x=>(x[7]||'').slice(0,7)).filter(Boolean))].sort().reverse();
- const f=a.filter(x=>(!st.rm||(x[7]||'').startsWith(st.rm))&&(!st.rt||x[4]===st.rt)&&(!st.rq||nz(x.join(' ')).includes(nz(st.rq))));
- const bm=cnt(f.filter(x=>x[7]),x=>x[7].slice(0,7)),mk=Object.keys(bm).sort().slice(-8),wd=cnt(f.filter(x=>x[7]),x=>wdOf(x[7]));
+function toggleResignWeekday(i,checked){
+ const selected=Array.isArray(st.resignWeekdays)?st.resignWeekdays.map(Number):[];
+ st.resignWeekdays=checked?[...new Set([...selected,Number(i)])]:selected.filter(x=>x!==Number(i));
+ st.rn=100;
+ render();
+}
+function vResign(){
+ const all=resigned().filter(x=>sf(x[3])&&x[7]);
+ const currentYear=TD.slice(0,4);
+ if(!st.resignYear)st.resignYear=currentYear;
+ if(st.resignMonth==null)st.resignMonth='';
+ if(st.resignWeek==null)st.resignWeek='';
+ if(!Array.isArray(st.resignWeekdays))st.resignWeekdays=[];
+ const year=String(st.resignYear),month=String(st.resignMonth||''),week=String(st.resignWeek||'');
+ const years=[...new Set(all.map(x=>String(x[7]).slice(0,4)).filter(Boolean))];
+ if(!years.includes(currentYear))years.push(currentYear);
+ years.sort((a,b)=>b.localeCompare(a));
+ const yearOptions='<option value="all" '+(year==='all'?'selected':'')+'>Tất cả năm</option>'+years.map(y=>'<option value="'+y+'" '+(y===year?'selected':'')+'>'+y+'</option>').join('');
+ const months=Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'));
+ const monthOptions='<option value="" '+(!month?'selected':'')+'>Tất cả tháng</option>'+months.map((m,i)=>'<option value="'+m+'" '+(m===month?'selected':'')+'>Tháng '+(i+1)+'</option>').join('');
+ const weekMax=year==='all'?53:isoWeekCount(Number(year));
+ const weekOptions='<option value="" '+(!week?'selected':'')+'>Tất cả tuần</option>'+Array.from({length:weekMax},(_,i)=>i+1).map(w=>'<option value="'+w+'" '+(String(w)===week?'selected':'')+'>Tuần '+w+'</option>').join('');
+ const yearData=all.filter(x=>year==='all'||String(x[7]).slice(0,4)===year);
+ const monthData=yearData.filter(x=>!month||String(x[7]).slice(5,7)===month);
+ const periodData=monthData.filter(x=>!week||isoWeekNumber(x[7])===Number(week));
+ const dayNames=WD.slice(1).concat(WD[0]);
+ const selected=st.resignWeekdays.map(Number).filter(i=>i>=0&&i<7);
+ const weekdayRows=dayNames.map((d,i)=>({d,i,n:periodData.filter(x=>wdOf(x[7])===d).length}));
+ const maxDay=Math.max(1,...weekdayRows.map(x=>x.n));
+ const weekdayBars=weekdayRows.map(r=>'<label class="bar wk'+(selected.includes(r.i)?' sel':'')+'"><input type="checkbox" '+(selected.includes(r.i)?'checked':'')+' onchange="toggleResignWeekday('+r.i+',this.checked)"><span style="white-space:normal;line-height:1.2"><b>'+r.d+'</b></span><span class="t"><i style="width:'+(r.n/maxDay*100)+'%"></i></span><b>'+r.n+'</b></label>').join('');
+ const dayData=selected.length?periodData.filter(x=>selected.includes(dayNames.indexOf(wdOf(x[7])))):periodData;
+ const f=dayData.filter(x=>(!st.rt||x[4]===st.rt)&&(!st.rq||nz(x.join(' ')).includes(nz(st.rq))));
+ const monthCounts=cnt(yearData,x=>String(x[7]).slice(0,7));
+ const monthKeys=Object.keys(monthCounts).sort().slice(-12);
  const rs=cnt(f,x=>/tự do|TD|ngang/i.test(x[8])?'Nghỉ tự do / nghỉ ngang':/báo nghỉ|nv|xin/i.test(x[8])?'Nhân viên báo nghỉ':/thực tập/i.test(x[8])?'Kết thúc thực tập':/học/i.test(x[8])?'Về đi học':x[8]?'Lý do khác':'Chưa ghi');
- const rows=f.slice(0,st.rn);
- return chkb()+`<div class="tb"><select onchange="go('rm',this.value)"><option value="">Tất cả tháng</option>${ms.map(m=>`<option value="${m}" ${m===st.rm?'selected':''}>${m.split('-').reverse().join('/')}</option>`).join('')}</select><select onchange="go('rt',this.value)"><option value="">Tất cả loại</option>${TYPES.map(t=>`<option ${t===st.rt?'selected':''}>${t}</option>`).join('')}</select><input data-k="rq" placeholder="Tìm tên / mã NV" value="${esc(st.rq)}" oninput="inp('rq',this.value)">${['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="openPasteImport(\'res\')">Nhập nghỉ việc</button>':''}</div>`+
- kpi([['Người nghỉ việc (theo bộ lọc)',f.length],['Chính thức',f.filter(x=>x[4]==='Chính thức').length],['Thời vụ',f.filter(x=>x[4]==='Thời vụ').length],['Sinh viên',f.filter(x=>x[4]==='Sinh viên').length]])+
- `<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng nghỉ</h3>${barsO(mk,bm)}</div><div class="card"><h3>Theo thứ trong tuần</h3>${barsO(WD.slice(1).concat(WD[0]),wd)}</div><div class="card"><h3>Theo lý do</h3>${bars(rs,f.length)}</div></div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]&&['admin','editor'].includes(D.me.role)?`<button class="b g" onclick="editResignation('${x[0]}','${x[7]}','${esc(x[8]).replace(/'/g,"&#39;")}')">Sửa</button><button class="r" onclick="restore('${x[0]}')">Khôi phục</button>`:'']),
- f.length>rows.length?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('rn',st.rn+200)">Xem thêm (${f.length-rows.length})</button></div>`:'')}
+ const rows=f.slice(0,st.rn||100);
+ const periodLabel=(year==='all'?'Tất cả năm':year)+(month?' · Tháng '+Number(month):'')+(week?' · Tuần '+week:'');
+ return chkb()+
+ '<div class="tb"><div class="seg"><label>Năm <select onchange="st.resignYear=this.value;st.resignWeek=\'\';st.resignWeekdays=[];st.rn=100;render()">'+yearOptions+'</select></label><label>Tháng <select onchange="st.resignMonth=this.value;st.resignWeek=\'\';st.resignWeekdays=[];st.rn=100;render()">'+monthOptions+'</select></label><label>Tuần <select onchange="st.resignWeek=this.value;st.resignWeekdays=[];st.rn=100;render()">'+weekOptions+'</select></label></div><select onchange="go(\'rt\',this.value)"><option value="">Tất cả loại</option>'+TYPES.map(t=>'<option value="'+t+'" '+(t===st.rt?'selected':'')+'>'+t+'</option>').join('')+'</select><input data-k="rq" placeholder="Tìm tên / mã NV" value="'+esc(st.rq||'')+'" oninput="inp(\'rq\',this.value)">'+(['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="openPasteImport(\'res\')">Nhập nghỉ việc</button>':'')+'</div>'+
+ kpi([['Người nghỉ việc – '+periodLabel,f.length],['Chính thức',f.filter(x=>x[4]==='Chính thức').length],['Thời vụ',f.filter(x=>x[4]==='Thời vụ').length],['Sinh viên',f.filter(x=>x[4]==='Sinh viên').length]])+
+ '<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng nghỉ</h3>'+barsO(monthKeys,monthCounts)+'</div><div class="card"><h3>Theo thứ trong tuần</h3>'+weekdayBars+'<p class="note" style="margin-top:8px">Tích một hoặc nhiều thứ để lọc danh sách nghỉ việc; bỏ hết tích để xem toàn bộ khoảng thời gian.</p></div><div class="card"><h3>Theo lý do</h3>'+bars(rs,f.length)+'</div></div>'+
+ tbl(['Mã NV','Họ tên','Ngày vào','Loại','Vendor','Line','Ca','Ngày nghỉ','Lý do',''],rows.map(x=>[esc(x[0]),esc(x[1]),fd(x[2]),esc(x[4]),esc(x[5]),esc(x[6]),esc(x[3]),fd(x[7]),esc(x[8]),x[9]&&['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="editResignation(\''+x[0]+'\',\''+x[7]+'\',\''+esc(x[8]).replace(/'/g,"&#39;")+'\')">Sửa</button> <button class="r" onclick="restore(\''+x[0]+'\')">Khôi phục</button>':'']),
+ f.length>rows.length?'<div class="tb" style="margin-top:10px"><button class="b g" onclick="go(\'rn\',(st.rn||100)+200)">Xem thêm ('+(f.length-rows.length)+')</button></div>':'');
+}
+
 function vEmployees(){
  const all=emps().filter(e=>sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
  const q=nz(st.eq||''),a=q?all.filter(e=>nz(e.join(' ')).includes(q)):all,canEdit=['admin','editor'].includes(D.me.role);
