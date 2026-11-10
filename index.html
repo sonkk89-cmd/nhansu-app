@@ -95,10 +95,34 @@ const sf=s=>st.sh.length===3||st.sh.includes(s);
 function chkb(){return `<div class="tb"><span class="k">Hiển thị ca:</span>${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>`<label class="card" style="margin:0;padding:7px 12px;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.sh.includes(k)?'checked':''} onchange="tg('${k}')">${l}</label>`).join('')}</div>`}
 function tgT(k){const i=st.lt.indexOf(k);i>=0?st.lt.splice(i,1):st.lt.push(k);render()}
 function ltCards(f){const T=[['Chính thức','Chính thức'],['Thời vụ','Thời vụ'],['Sinh viên','Sinh viên'],['?','Chưa có trong DS']];return `<div class="grid">${T.map(([k,l])=>{const n=f.filter(x=>(x[4]||'?')===k).length,on=st.lt.includes(k);return `<label class="card cl ${on?'sel':''}" style="display:block"><div style="display:flex;gap:8px;align-items:center"><input type="checkbox" ${on?'checked':''} onchange="tgT('${k}')"><span class="k">${l}</span></div><div class="v">${n}</div><div class="k">người nghỉ · tích để xem danh sách</div></label>`}).join('')}</div>`}
-function vEmpLeave(){const all=D.E.concat(S.adds),e=all.find(x=>x[0]===st.le),yr=st.ly||st.yr,ls=e?leaves().filter(x=>x[0]===st.le&&x[7].startsWith(yr)).sort((a,b)=>a[7].localeCompare(b[7])):[],cd=cnt(ls,x=>CODE[x[5]]||x[5]),mo=cnt(ls,x=>x[7].slice(5,7)),mk=Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'));
- const hd=`<h3>Tra cứu số ngày nghỉ của 1 nhân viên trong năm</h3><div class="tb"><input list="el2" placeholder="Gõ mã hoặc tên nhân viên" value="${e?esc(e[0]+' - '+e[1]):''}" onchange="go('le',this.value.split(' - ')[0].trim())" style="min-width:240px"><datalist id="el2">${all.map(x=>`<option value="${esc(x[0])} - ${esc(x[1])}">`).join('')}</datalist><input type="number" min="2020" max="2100" value="${yr}" onchange="go('ly',this.value)" style="width:100px"></div>`;
- if(!e)return `<div class="card" style="margin-top:12px">${hd}<div class="note">Chọn nhân viên để xem chi tiết. Mỗi lượt ghi nhận tính là 1 ngày nghỉ.</div></div>`;
- return `<div class="card" style="margin-top:12px">${hd}<div class="note" style="margin:0 0 10px"><b>${esc(e[1])}</b> · Mã ${esc(e[0])} · ${esc(e[6])} · Ca ${esc(e[3])} · ${esc(e[4])}${S.res[e[0]]?' · <span style="color:var(--er)">Đã nghỉ việc</span>':''}</div>`+kpi([['Tổng ngày nghỉ năm '+yr,ls.reduce((n,x)=>n+(x[5]==='P/2'?0.5:1),0)],['Phép năm đã dùng (ngày)',ls.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)],['Nghỉ tự do (TD)',ls.filter(x=>x[5]==='TD').length],['Loại khác',ls.filter(x=>x[5]!=='P'&&x[5]!=='TD').length]])+`<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng</h3>${barsO(mk,mo)}</div><div class="card"><h3>Theo loại nghỉ</h3>${bars(cd,ls.length)}</div></div>`+tbl(['STT','Ngày','Thứ','Loại nghỉ','Lý do'],ls.map((x,i)=>[i+1,fd(x[7]),wdOf(x[7]),esc(CODE[x[5]]||x[5]),esc(x[6])]))+`</div>`}
+function leaveHistoryEmployees(){
+ const byId=new Map();
+ [...D.E,...D.R,...S.adds].forEach(e=>{if(e&&e[0])byId.set(String(e[0]),e)});
+ leaves().forEach(x=>{if(x&&x[0]&&!byId.has(String(x[0])))byId.set(String(x[0]),[x[0],x[1]||'', '',x[3]||'',x[4]||'',x[2]||'', '',''])});
+ return [...byId.values()];
+}
+function searchLeaveHistory(q){
+ st.lhQ=q;const query=String(q||'').trim().toLocaleLowerCase('vi');
+ const all=leaveHistoryEmployees();
+ const exact=all.find(e=>String(e[0]).toLocaleLowerCase('vi')===query);
+ const matches=query?all.filter(e=>String(e[0]||'').toLocaleLowerCase('vi').includes(query)||String(e[1]||'').toLocaleLowerCase('vi').includes(query)):[];
+ st.le=exact?String(exact[0]):matches.length===1?String(matches[0][0]):'';
+ const pos=document.activeElement.selectionStart;render();
+ const el=document.querySelector('[data-k="lhQ"]');if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}
+}
+function vEmpLeave(){
+ const all=leaveHistoryEmployees(),q=String(st.lhQ||'').trim().toLocaleLowerCase('vi');
+ const matches=q?all.filter(e=>String(e[0]||'').toLocaleLowerCase('vi').includes(q)||String(e[1]||'').toLocaleLowerCase('vi').includes(q)):[];
+ const e=all.find(x=>String(x[0])===String(st.le||'')),yr=String(st.ly||TD.slice(0,4));
+ const ls=e?leaves().filter(x=>String(x[0])===String(e[0])&&String(x[7]||'').slice(0,4)===yr).sort((a,b)=>String(a[7]).localeCompare(String(b[7]))):[];
+ const cd=cnt(ls,x=>CODE[x[5]]||x[5]),mo=cnt(ls,x=>String(x[7]).slice(5,7));
+ const mk=Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'));
+ const candidates=matches.length>1&&!e?'<div class="tb" style="margin:8px 0">'+matches.slice(0,30).map(x=>'<button class="b g" data-empid="'+esc(x[0])+'" onclick="selectLeaveHistory(this.dataset.empid)">'+esc(x[0])+' · '+esc(x[1])+'</button>').join('')+'</div>':'';
+ const header='<h3>Tra cứu lịch sử nghỉ nhân viên</h3><div class="tb"><input data-k="lhQ" placeholder="Gõ mã hoặc tên nhân viên" value="'+esc(st.lhQ||'')+'" oninput="searchLeaveHistory(this.value)" style="min-width:260px"><input type="number" min="2020" max="2100" value="'+esc(yr)+'" onchange="go(\'ly\',this.value)" style="width:100px"><span class="note">Tìm trong danh sách nhân viên và cả lịch sử nghỉ đã ghi.</span></div>'+candidates;
+ if(!e)return '<div class="card" style="margin-top:12px">'+header+'<div class="note">'+(q?(matches.length?'Chọn một nhân viên trong kết quả để xem lịch sử.':'Không tìm thấy nhân viên khớp.'):'Nhập mã hoặc tên để tra cứu.')+'</div></div>';
+ return '<div class="card" style="margin-top:12px">'+header+'<div class="note" style="margin:0 0 10px"><b>'+esc(e[1])+'</b> · Mã '+esc(e[0])+(S.res[e[0]]?' · <span style="color:var(--er)">Đã nghỉ việc</span>':'')+'</div>'+kpi([['Tổng lượt nghỉ năm '+yr,ls.reduce((n,x)=>n+(x[5]==='P/2'?0.5:1),0)],['Phép năm đã dùng (ngày)',ls.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)],['Nghỉ tự do (TD)',ls.filter(x=>x[5]==='TD').length],['Loại khác',ls.filter(x=>x[5]!=='P'&&x[5]!=='TD').length]])+'<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo tháng</h3>'+barsO(mk,mo)+'</div><div class="card"><h3>Theo loại nghỉ</h3>'+bars(cd,ls.length)+'</div></div>'+tbl(['STT','Ngày','Thứ','Loại nghỉ','Lý do'],ls.map((x,i)=>[i+1,fd(x[7]),wdOf(x[7]),esc(CODE[x[5]]||x[5]),esc(x[6])]))+'</div>';
+}
+function selectLeaveHistory(id){st.le=String(id);render()}
 function exportOverviewWorking(){
  const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
  const leaveIds=new Set(allL.map(x=>String(x[0])));
@@ -202,29 +226,44 @@ function isoWeekCount(year){const d=new Date(Date.UTC(Number(year),11,28));const
 function weekDates(year,week){const m=isoWeekMonday(year,week);return Array.from({length:7},(_,i)=>{const d=new Date(m);d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10)});}
 function isoWeekNumber(dateStr){const d=new Date(dateStr+'T00:00:00Z');const day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-day);return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7);}
 function toggleLeaveWeekday(date,checked){st.leaveWeekdays=Array.isArray(st.leaveWeekdays)?st.leaveWeekdays.filter(x=>typeof x==='string'):[];st.leaveWeekdays=checked?[...new Set([...st.leaveWeekdays,date])]:st.leaveWeekdays.filter(x=>x!==date);render();}
-function weekBars(rows,selected){const max=Math.max(1,...rows.map(r=>r.n));return rows.map(r=>{const on=selected.includes(r.d);return '<label class="bar wk'+(on?' sel':'')+'"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleLeaveWeekday(\''+r.d+'\',this.checked)"><span style="white-space:normal;line-height:1.2"><small style="display:block;color:var(--mu);font-size:11px;font-weight:400">'+fd(r.d)+'</small><b>'+WD[(r.i+1)%7]+'</b></span><span class="t"><i style="width:'+(r.n/max*100)+'%"></i></span><b>'+r.n+'</b></label>'}).join('')}
-function vLeave(){
- const all=leaves().filter(x=>sf(x[3]));
- const today=st.day||new Date().toISOString().slice(0,10);
- if(!st.leaveYear)st.leaveYear=Number(today.slice(0,4));
- if(!st.leaveWeek)st.leaveWeek=isoWeekNumber(today);
- if(!Array.isArray(st.leaveWeekdays))st.leaveWeekdays=[];
- const year=Number(st.leaveYear),week=Number(st.leaveWeek),dates=weekDates(year,week);
- const rows=dates.map((d,i)=>({d,i,n:all.filter(x=>x[7]===d).length}));
- st.leaveWeekdays=st.leaveWeekdays.filter(x=>typeof x==='string');
- const selected=rows.filter(r=>st.leaveWeekdays.includes(r.d)).map(r=>r.d);
- const weekSet=new Set(dates),weekData=all.filter(x=>weekSet.has(x[7]));
- const f=all.filter(x=>selected.includes(x[7]));
- const displayData=selected.length?f:weekData;
- const title=selected.length?selected.map(fd).join(', '):'Tuần '+week+' / '+year;
- const wd=cnt(weekData,x=>wdOf(x[7])),days=[...new Set(all.map(x=>x[7]))].length,a=emps();
- const weeks=Array.from({length:isoWeekCount(year)},(_,i)=>i+1).map(w=>'<option value="'+w+'" '+(w===week?'selected':'')+'>Tuần '+w+'</option>').join('');
- return chkb()+'<div class="tb"><div class="seg"><label>Năm <input type="number" min="2020" max="2100" value="'+year+'" style="width:95px" onchange="st.leaveYear=Number(this.value);st.leaveWeek=Math.min(st.leaveWeek,isoWeekCount(st.leaveYear));st.leaveWeekdays=[];render()"></label><label>Tuần <select onchange="st.leaveWeek=Number(this.value);st.leaveWeekdays=[];render()">'+weeks+'</select></label></div>'+(['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="openPasteImport(\'leaves\')">Nhập nghỉ hằng ngày</button>':'')+'</div>'+
- kpi([['Lượt nghỉ – '+title,displayData.length],['Ngày đã ghi nhận',days],['Nghỉ tự do (TD)',displayData.filter(x=>x[5]==='TD').length],['Phép năm đã dùng (ngày)',displayData.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)]])+
- '<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo thứ trong tuần</h3>'+weekBars(rows,selected)+'<p class="note" style="margin-top:8px">Chọn một hoặc nhiều thứ trên biểu đồ để xem danh sách nghỉ.</p></div><div class="card"><h3>Theo loại nghỉ</h3>'+bars(cnt(displayData,x=>CODE[x[5]]||x[5]),displayData.length)+'</div><div class="card"><h3>Theo line</h3>'+bars(cnt(displayData,x=>x[2]),displayData.length)+'</div></div>'+
- (selected.length?ltCards(f)+(!st.lt.length?'<div class="note" style="margin:0 0 8px">Tích vào ô loại nhân lực ở trên để xem danh sách người nghỉ.</div>':tbl(['Ngày','Thứ','Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do',''],f.filter(x=>st.lt.includes(x[4]||'?')).map(x=>[fd(x[7]),wdOf(x[7]),esc(x[0]),esc(x[1])||'<span class="note">(chưa có trong DS)</span>',esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="editLeave(\''+x[0]+'\',\''+x[7]+'\',\''+x[5]+'\',\''+esc(x[6]).replace(/'/g,"&#39;")+'\')">Sửa</button>':'']))):'')+
- '<div class="card" style="margin-top:12px"><h3>Ghi nhận nghỉ cho ngày bất kỳ</h3><div class="f"><div><label>Nhân viên (mã hoặc tên)</label><input id="lE" list="el" placeholder="Gõ để tìm"><datalist id="el">'+a.map(e=>'<option value="'+esc(e[0])+' - '+esc(e[1])+'">').join('')+'</datalist></div><div><label>Ngày nghỉ</label><input id="lD" type="date" value="'+(selected[0]||dates[0])+'"></div><div><label>Loại nghỉ</label><select id="lC">'+Object.entries(CODE).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div><div><label>Lý do</label><input id="lR"></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addLeave()">Ghi nhận</button><span class="msg '+(st.msg.startsWith('!')?'e':'')+'">'+esc(st.msg.replace('!',''))+'</span></div><p class="note">Lịch tuần sử dụng tuần ISO (Thứ 2 đến Chủ nhật).</p></div>';
+function leaveWeekdayBars(rows,selected){
+ const max=Math.max(1,...rows.map(r=>r.n));
+ return rows.map(r=>{
+  const on=selected.includes(r.d);
+  return '<label class="bar wk'+(on?' sel':'')+'"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleLeaveWeekday(\''+r.d+'\',this.checked)"><span style="white-space:normal;line-height:1.2"><b>'+r.d+'</b></span><span class="t"><i style="width:'+(r.n/max*100)+'%"></i></span><b>'+r.n+'</b></label>';
+ }).join('');
 }
+function vLeave(){
+ const all=leaves().filter(x=>sf(x[3])&&x[7]);
+ const today=st.day||TD;
+ if(!st.leaveYear)st.leaveYear=Number(today.slice(0,4));
+ if(st.leaveMonth==null)st.leaveMonth='';
+ if(st.leaveWeek==null)st.leaveWeek='';
+ if(!Array.isArray(st.leaveWeekdays))st.leaveWeekdays=[];
+ const year=Number(st.leaveYear),month=String(st.leaveMonth||''),week=String(st.leaveWeek||'');
+ const monthOptions='<option value="" '+(!month?'selected':'')+'>Tất cả tháng</option>'+Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0')).map((m,i)=>'<option value="'+m+'" '+(m===month?'selected':'')+'>Tháng '+(i+1)+'</option>').join('');
+ const weekOptions='<option value="" '+(!week?'selected':'')+'>Tất cả tuần</option>'+Array.from({length:isoWeekCount(year)},(_,i)=>i+1).map(w=>'<option value="'+w+'" '+(String(w)===week?'selected':'')+'>Tuần '+w+'</option>').join('');
+ const yearData=all.filter(x=>String(x[7]).slice(0,4)===String(year));
+ const monthData=yearData.filter(x=>!month||String(x[7]).slice(5,7)===month);
+ const periodData=monthData.filter(x=>!week||isoWeekNumber(x[7])===Number(week));
+ const dayNames=WD.slice(1).concat(WD[0]);
+ const selected=st.leaveWeekdays.filter(d=>dayNames.includes(d));
+ const weekdayRows=dayNames.map(d=>({d,n:periodData.filter(x=>wdOf(x[7])===d).length}));
+ const displayData=selected.length?periodData.filter(x=>selected.includes(wdOf(x[7]))):periodData;
+ const title=(year)+(month?' · Tháng '+Number(month):' · Tất cả tháng')+(week?' · Tuần '+week:' · Tất cả tuần')+(selected.length?' · '+selected.join(', '):'');
+ const days=[...new Set(periodData.map(x=>x[7]))].length,a=emps();
+ const weekDatesForForm=week?weekDates(year,Number(week)):[];
+ const defaultLeaveDate=weekDatesForForm[0]||(month?String(year)+'-'+month+'-01':today);
+ const leaveTypes=st.lt||[];
+ const typeRows=displayData.filter(x=>leaveTypes.includes(x[4]||'?'));
+ const history=vEmpLeave();
+ return chkb()+'<div class="tb"><div class="seg"><label>Năm <input type="number" min="2020" max="2100" value="'+year+'" style="width:95px" onchange="st.leaveYear=Number(this.value);st.leaveWeek=\'\';st.leaveWeekdays=[];st.lt=[];render()"></label><label>Tháng <select onchange="st.leaveMonth=this.value;st.leaveWeek=\'\';st.leaveWeekdays=[];st.lt=[];render()">'+monthOptions+'</select></label><label>Tuần <select onchange="st.leaveWeek=this.value;st.leaveWeekdays=[];st.lt=[];render()">'+weekOptions+'</select></label></div>'+(['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="openPasteImport(\'leaves\')">Nhập nghỉ hằng ngày</button>':'')+'</div>'+
+ kpi([['Lượt nghỉ – '+title,displayData.length],['Ngày đã ghi nhận',days],['Nghỉ tự do (TD)',displayData.filter(x=>x[5]==='TD').length],['Phép năm đã dùng (ngày)',displayData.reduce((n,x)=>n+(x[5]==='P'?1:x[5]==='P/2'?0.5:0),0)]])+
+ '<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo thứ trong tuần</h3>'+leaveWeekdayBars(weekdayRows,selected)+'<p class="note" style="margin-top:8px">Tích một hoặc nhiều thứ để lọc danh sách; bỏ hết tích để xem toàn bộ khoảng thời gian.</p></div><div class="card"><h3>Theo loại nghỉ</h3>'+bars(cnt(displayData,x=>CODE[x[5]]||x[5]),displayData.length)+'</div><div class="card"><h3>Theo line</h3>'+bars(cnt(displayData,x=>x[2]),displayData.length)+'</div></div>'+
+ ltCards(displayData)+(!leaveTypes.length?'<div class="note" style="margin:0 0 8px">Tích vào ô loại nhân lực để xem danh sách người nghỉ.</div>':tbl(['Ngày','Thứ','Mã NV','Họ tên','Line','Ca','Loại NL','Loại nghỉ','Lý do',''],typeRows.map(x=>[fd(x[7]),wdOf(x[7]),esc(x[0]),esc(x[1])||'<span class="note">(chưa có trong DS)</span>',esc(x[2]),esc(x[3]),esc(x[4]),esc(CODE[x[5]]||x[5]),esc(x[6]),['admin','editor'].includes(D.me.role)?'<button class="b g" onclick="editLeave(\''+x[0]+'\',\''+x[7]+'\',\''+x[5]+'\',\''+esc(x[6]).replace(/'/g,"&#39;")+'\')">Sửa</button>':'']))+
+ '<div class="card" style="margin-top:12px"><h3>Ghi nhận nghỉ cho ngày bất kỳ</h3><div class="f"><div><label>Nhân viên (mã hoặc tên)</label><input id="lE" list="el" placeholder="Gõ để tìm"><datalist id="el">'+a.map(e=>'<option value="'+esc(e[0])+' - '+esc(e[1])+'">').join('')+'</datalist></div><div><label>Ngày nghỉ</label><input id="lD" type="date" value="'+defaultLeaveDate+'"></div><div><label>Loại nghỉ</label><select id="lC">'+Object.entries(CODE).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div><div><label>Lý do</label><input id="lR"></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addLeave()">Ghi nhận</button><span class="msg '+(st.msg.startsWith('!')?'e':'')+'">'+esc(st.msg.replace('!',''))+'</span></div><p class="note">Tuần dùng chuẩn ISO, từ Thứ 2 đến Chủ nhật.</p></div>'+history;
+}
+
 function vTopLeave(){
  const year=String(st.topYear||TD.slice(0,4)),q=nz(st.topQ||'');
  const allEmp=[...D.E,...S.adds,...D.R],byId=new Map();
