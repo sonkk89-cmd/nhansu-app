@@ -86,7 +86,7 @@ function tbl(h,rows,more){return `<div class="tw"><table><tr>${h.map(x=>`<th>${x
 function shiftKpi(a){const c=cnt(a,e=>e[3]),gs=r=>{const g=cnt(r,e=>{const n=nz(e[9]);return n==='nam'?'Nam':n==='nu'?'Nữ':'Khác'});return `Nam ${g.Nam||0} · Nữ ${g['Nữ']||0}${g['Khác']?' · Chưa rõ '+g['Khác']:''}`},s=k=>gs(a.filter(e=>e[3]===k));return kpi([['Tổng nhân lực',a.length,gs(a)],['Ca A',c.A||0,s('A')],['Ca C',c.C||0,s('C')],['Hành chính (HC)',c.HC||0,s('HC')]])}
 const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
 const eH=['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
-function setTab(i){tab=i;st.msg='';render();if(i===8)loadAdmin();if(i===11)loadCheckin()}
+function setTab(i){if(i===11&&D.me.role==='viewer')return;tab=i;st.msg='';render();if(i===8)loadAdmin();if(i===11)loadCheckin()}
 function go(k,v){st[k]=v;render()}
 function inp(k,v){st[k]=v;const p=document.activeElement.selectionStart;render();const el=document.querySelector('[data-k="'+k+'"]');if(el){el.focus();try{el.setSelectionRange(p,p)}catch(e){}}}
 
@@ -680,7 +680,7 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
  if(err){const dup=/duplicate key|employees_pkey|employees_id_key/i.test(err),message=dup?'Mã NV đã tồn tại trong dữ liệu. Hãy kiểm tra mã nhân viên rồi thử lại.':'THẤT BẠI, chưa lưu: '+err;st.msg='!'+message;S={adds:[],res:{},leaves:[]};alert(message);await load();return}
  S={adds:[],res:{},leaves:[]};st.msg=ok||'Đã lưu vào máy chủ';await load()}
 async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}D=await r.json();if(Array.isArray(D.L))D.L=D.L.map(x=>{if(Array.isArray(x)&&x[7])x[7]=String(x[7]).slice(0,10);return x});$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){$('sub').textContent='Lỗi tải dữ liệu từ máy chủ: '+String(e?.message||e||'Lỗi không xác định')}}
-function render(){if(tab===8&&D.me.role!=='admin')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>i===8&&D.me.role!=='admin'?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
+function render(){if(tab===8&&D.me.role!=='admin')tab=0;if(tab===11&&D.me.role==='viewer')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>(i===8&&D.me.role!=='admin')||(i===11&&D.me.role==='viewer')?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc · '+(D.L||[]).length+' lượt nghỉ đã tải';
  const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin,vTopLeave,vCalendar,vCheckin][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
