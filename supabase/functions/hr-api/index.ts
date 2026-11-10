@@ -70,13 +70,13 @@ function dateValue(v: unknown) {
 async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   // Accept Cookie or Set-Cookie input, but forward only cookie pairs, never Set-Cookie attributes.
   const cookie = (Deno.env.get("ILSUNGTECH_COOKIE") || "")
-    .replace(/^\\s*(?:Set-)?Cookie:\\s*/i, "")
-    .replace(/[\\r\\n]+/g, " ")
-    .replace(/;\\s*(?:expires=[^;]*|max-age=\\d+|httponly|secure|path=[^;]*|samesite=[^;]*|domain=[^;]*)/gi, "")
-    .replace(/;\\s*$/g, "")
+    .replace(/^\s*(?:Set-)?Cookie:\s*/i, "")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/;\s*(?:expires=[^;]*|max-age=\d+|httponly|secure|path=[^;]*|samesite=[^;]*|domain=[^;]*)/gi, "")
+    .replace(/;\s*$/g, "")
     .trim();
   const csrfToken = (Deno.env.get("ILSUNGTECH_CSRF_TOKEN") || "")
-    .replace(/^\\s*X-Frappe-Csrf-Token:\\s*/i, "")
+    .replace(/^\s*X-Frappe-Csrf-Token:\s*/i, "")
     .trim();
   if (!cookie) throw Object.assign(new Error("Chưa cấu hình kết nối hệ thống chấm công (ILSUNGTECH_COOKIE)"), { status: 503 });
   const baseUrl = (Deno.env.get("ILSUNGTECH_BASE_URL") || "https://next.il-sungtech.com").replace(/\/+$/, "");
