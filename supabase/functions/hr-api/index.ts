@@ -308,6 +308,7 @@ Deno.serve(async req => {
       if (error) throw error; return reply(data, 200, origin);
     }
     if (method === "POST" && route === "/api/checkins/live") {
+      requireRole(user, ["admin", "editor"]);
       const body = await req.json().catch(() => ({}));
       const requestedDate = dateValue(body.date);
       if (!requestedDate) return fail("Chọn ngày chấm công hợp lệ (YYYY-MM-DD)", 400, origin);
