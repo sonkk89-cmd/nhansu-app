@@ -446,13 +446,13 @@ function previewBulkLine(){
  const preview=$('blPreview');
  if(preview)preview.innerHTML=oldLine?'<b>'+count+'</b> nhân viên đang làm việc có Line <b>'+esc(oldLine)+'</b> sẽ được chuyển'+(newLine?' sang <b>'+esc(newLine)+'</b>.':'.')+'<div class="note" style="margin-top:5px">Kiểm tra kỹ trước khi xác nhận. Nếu Line mới đã tồn tại, các nhân viên sẽ được gộp vào Line đó.</div>':'Chọn Line cũ để xem trước số nhân viên bị ảnh hưởng.';
  const button=$('blConfirm');
- if(button)button.disabled=!oldLine||!newLine||count===0||norm(oldLine)===norm(newLine)||newLine.length>120;
+ if(button)button.disabled=!oldLine||!newLine||count===0||nz(oldLine)===nz(newLine)||newLine.length>120;
 }
 async function bulkLineChange(){
  if(!['admin','editor'].includes(D.me.role))return;
  const oldLine=String($('blOld')?.value||'').trim(),newLine=String($('blNew')?.value||'').trim();
  const previewCount=oldLine?emps().filter(e=>String(e[6]||'').trim()===oldLine).length:0;
- if(!oldLine||!newLine||!previewCount||norm(oldLine)===norm(newLine)){previewBulkLine();return}
+ if(!oldLine||!newLine||!previewCount||nz(oldLine)===nz(newLine)){previewBulkLine();return}
  if(!confirm('Chuyển '+previewCount+' nhân viên từ Line "'+oldLine+'" sang "'+newLine+'"?'))return;
  const button=$('blConfirm'),error=$('blError');button.disabled=true;button.textContent='Đang cập nhật...';error.textContent='';
  try{
