@@ -47,10 +47,22 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 
 /* Give the all-employees view enough room to show its columns together */
 main#app.employees-page{max-width:1200px;width:100%;padding-left:16px;padding-right:16px}
-#app.employees-page .tw{overflow-x:visible}
-#app.employees-page table{min-width:100%;table-layout:auto;font-size:12px}
-#app.employees-page th,#app.employees-page td{padding:6px 7px;white-space:normal;line-height:1.3}
-#app.employees-page th:first-child,#app.employees-page td:first-child{white-space:nowrap}
+#app.employees-page .tw{overflow:hidden}
+#app.employees-page table{width:100%;min-width:0;table-layout:fixed;font-size:11.5px}
+#app.employees-page th,#app.employees-page td{padding:6px 5px;white-space:nowrap;line-height:1.3;overflow:hidden;text-overflow:ellipsis}
+#app.employees-page th:nth-child(1){width:8%}
+#app.employees-page th:nth-child(2){width:11%}
+#app.employees-page th:nth-child(3){width:8%}
+#app.employees-page th:nth-child(4){width:4%}
+#app.employees-page th:nth-child(5){width:9%}
+#app.employees-page th:nth-child(6){width:8%}
+#app.employees-page th:nth-child(7){width:8%}
+#app.employees-page th:nth-child(8){width:10%}
+#app.employees-page th:nth-child(9){width:8%}
+#app.employees-page th:nth-child(10){width:10%}
+#app.employees-page th:nth-child(11){width:6%}
+#app.employees-page th:nth-child(12){width:10%}
+#app.employees-page td:last-child button{padding:3px 5px!important;font-size:10px!important;white-space:nowrap}
 @media(max-width:760px){
  main#app.employees-page{padding-left:10px;padding-right:10px}
  #app.employees-page .tw{overflow-x:auto}
@@ -415,8 +427,9 @@ function vEmployees(){
  const deptById=new Map((checkins?.rows||[]).map(r=>[String(r.emp_id||'').trim(),String(r.department||'').trim()]));
  const q=nz(st.eq||''),a=q?all.filter(e=>nz([...e,deptById.get(String(e[0]))||''].join(' ')).includes(q)):all;
  const deptStatus=!canEdit?'<span class="note">Line Điểm Danh chỉ tải được với quyền nhập liệu hoặc quản trị.</span>':st.ckLoading?'<span class="note">Đang tải Line Điểm Danh trực tiếp...</span>':checkins?'<span class="note">Line Điểm Danh lấy trực tiếp cho ngày '+fd(checkins.date||st.ckDate||TD)+' · không lưu vào Supabase.</span>':'<span class="note">'+(st.ckError?esc(st.ckError)+' · ':'')+'Chưa tải được dữ liệu Line Điểm Danh.</span> <button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button>';
+ const cell=v=>{const s=String(v??'');return '<span title="'+esc(s)+'">'+esc(s||'')+'</span>'};
  return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div><div class="tb" style="margin:6px 0 0">${deptStatus}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(deptById.get(String(e[0]))||'')||'<span class="note">—</span>',esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
+ tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[cell(e[0]),cell(e[1]),cell(fd(e[2])),cell(e[3]),cell(e[4]),cell(e[5]),cell(e[6]),cell(deptById.get(String(e[0]))||'—'),cell(e[7]),cell(e[8]),cell(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
 }
 
 function openDeleteAllEmployees(){
