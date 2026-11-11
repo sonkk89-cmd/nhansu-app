@@ -236,6 +236,33 @@ Deno.serve(async req => {
       return reply({ ok: true, token: data.session.access_token, user: profile }, 200, origin);
     }
     const user = await currentUser(req);
+    if (method === "POST" && route === "/api/account/change-password") {
+      const body = await req.json().catch(() => ({}));
+      const currentPassword = String(body.currentPassword ?? "");
+      const newPassword = String(body.newPassword ?? "");
+      const confirmPassword = String(body.confirmPassword ?? "");
+      if (!currentPassword) return fail("Nhập mật khẩu hiện tại", 400, origin);
+      if (newPassword.length < 8) return fail("Mật khẩu mới cần tối thiểu 8 ký tự", 400, origin);
+      if (newPassword !== confirmPassword) return fail("Mật khẩu nhập lại chưa khớp", 400, origin);
+      if (newPassword === currentPassword) return fail("Mật khẩu mới phải khác mật khẩu hiện tại", 400, origin);
+      const email = user.username.includes("@") ? user.username.toLowerCase() : usernameEmail(user.username);
+      const verifier = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
+      const verified = await verifier.auth.signInWithPassword({ email, password: currentPassword });
+      if (verified.error || !verified.data?.user || verified.data.user.id !== user.id) {
+        return fail("Mật khẩu hiện tại không đúng", 400, origin);
+      }
+      const { error } = await admin.auth.admin.updateUserById(user.id, { password: newPassword });
+      if (error) return fail("Supabase không chấp nhận mật khẩu mới. Hãy kiểm tra độ dài và thử lại.", 400, origin);
+      let warning = "";
+      const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+      try {
+        const { error: revokeError } = await admin.auth.admin.signOut(token);
+        if (revokeError) warning = "Một số phiên khác có thể còn hiệu lực đến khi access token hết hạn.";
+      } catch { warning = "Một số phiên khác có thể còn hiệu lực đến khi access token hết hạn."; }
+      try { await audit(user.username, "password_change", "Tai khoan tu doi mat khau"); }
+      catch { warning = (warning ? warning + " " : "") + "Chưa ghi được nhật ký thao tác."; }
+      return reply({ ok: true, warning }, 200, origin);
+    }
     if (method === "GET" && route === "/api/database-usage") {
       requireRole(user, ["admin"]);
       const { data, error } = await admin.rpc("hr_database_usage");
