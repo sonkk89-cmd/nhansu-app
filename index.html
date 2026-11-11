@@ -44,6 +44,19 @@ main{max-width:1200px;margin:0 auto;padding:16px 16px 48px}.grid{display:grid;gr
 .checkin-pivot-card{border-top:3px solid #3b82f6}.checkin-pivot-card th{background:#eaf2ff;color:#315780}.checkin-off{color:var(--er);font-weight:700}.checkin-work{color:var(--ok);font-weight:700}.checkin-badge{display:inline-block;border-radius:999px;padding:3px 9px;background:#e8f7f0;color:#08754f;font-size:11px;font-weight:700}.checkin-badge.off{background:#fff0f0;color:#b42318}
 .checkin-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.checkin-toolbar label{font-size:12px;color:var(--mu);font-weight:600}
 @media(max-width:600px){.checkin-hero{padding:12px}.checkin-hero h2{font-size:16px}.checkin-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.checkin-summary .card{padding:8px}.checkin-summary .v{font-size:20px}}
+
+/* Give the all-employees view enough room to show its columns together */
+main#app.employees-page{max-width:none;width:100%;padding-left:24px;padding-right:24px}
+#app.employees-page .tw{overflow-x:visible}
+#app.employees-page table{min-width:100%;table-layout:auto;font-size:12px}
+#app.employees-page th,#app.employees-page td{padding:6px 7px;white-space:normal;line-height:1.3}
+#app.employees-page th:first-child,#app.employees-page td:first-child{white-space:nowrap}
+@media(max-width:760px){
+ main#app.employees-page{padding-left:10px;padding-right:10px}
+ #app.employees-page .tw{overflow-x:auto}
+ #app.employees-page table{min-width:1150px}
+ #app.employees-page th,#app.employees-page td{white-space:nowrap}
+}
 </style></head><body>
 <header class="topbar"><div class="topbar-in"><div class="brand-mark">Production - ILS</div><div class="head-copy"><h1>Báo cáo nhân sự – Bộ phận sản xuất</h1><div class="sub" id="sub"></div></div><div class="account"><span id="me"></span> · <a href="#" onclick="HRCloud.logout(event)">Đăng xuất</a></div></div></header>
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
@@ -760,7 +773,7 @@ async function save(ok){const b={adds:S.adds,res:S.res,restore:S.restore||[],lea
  if(err){const dup=/duplicate key|employees_pkey|employees_id_key/i.test(err),message=dup?'Mã NV đã tồn tại trong dữ liệu. Hãy kiểm tra mã nhân viên rồi thử lại.':'THẤT BẠI, chưa lưu: '+err;st.msg='!'+message;S={adds:[],res:{},leaves:[]};alert(message);await load();return}
  S={adds:[],res:{},leaves:[]};st.msg=ok||'Đã lưu vào máy chủ';await load()}
 async function load(){try{const r=await HRCloud.api('/api/data');if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'HTTP '+r.status)}D=await r.json();if(Array.isArray(D.L))D.L=D.L.map(x=>{if(Array.isArray(x)&&x[7])x[7]=String(x[7]).slice(0,10);return x});$('me').textContent=D.me.name+' ('+D.me.role+')';render()}catch(e){$('sub').textContent='Lỗi tải dữ liệu từ máy chủ: '+String(e?.message||e||'Lỗi không xác định')}}
-function render(){if(tab===8&&D.me.role!=='admin')tab=0;if(tab===11&&D.me.role==='viewer')tab=0;$('app').className=tab===0?'overview':'';$('nav').innerHTML=TABS.map((t,i)=>(i===8&&D.me.role!=='admin')||(i===11&&D.me.role==='viewer')?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
+function render(){if(tab===8&&D.me.role!=='admin')tab=0;if(tab===11&&D.me.role==='viewer')tab=0;$('app').className=tab===0?'overview':tab===1?'employees-page':'';$('nav').innerHTML=TABS.map((t,i)=>(i===8&&D.me.role!=='admin')||(i===11&&D.me.role==='viewer')?'':`<button class="${i===tab?'on':''}" onclick="setTab(${i})">${t}</button>`).join('');
  $('sub').textContent='Dữ liệu trực tiếp · '+emps().length+' đang làm · '+resigned().length+' đã nghỉ việc · '+(D.L||[]).length+' lượt nghỉ đã tải';
  const keep=window.scrollY;$('app').innerHTML='<div class="tb" style="justify-content:flex-end"><button class="b g" onclick="exportTabXlsx()">Xuất Excel tab này</button></div>'+[vOverview,vEmployees,vLine,vLeader,vType,vLeave,vResign,vManage,vAdmin,vTopLeave,vCalendar,vCheckin][tab]();}
 load();setInterval(()=>{if(!document.activeElement.matches('input,select'))load()},60000);
