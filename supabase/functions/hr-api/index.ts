@@ -285,6 +285,24 @@ Deno.serve(async req => {
       if(error)throw error; if(!data)return fail("Không tìm thấy nhân viên trong danh sách nghỉ việc",404,origin);
       await audit(user.username,"resignation_update",`${id}: ngày nghỉ ${date}`); return reply({ok:true},200,origin);
     }
+    if (method === "POST" && route === "/api/employees/bulk-line") {
+      requireRole(user, ["admin", "editor"]);
+      const b = await req.json();
+      const oldLine = String(b.oldLine || "").trim(), newLine = String(b.newLine || "").trim();
+      if (!oldLine || !newLine) return fail("Chọn Line cũ và nhập Line mới", 400, origin);
+      if (oldLine.length > 120 || newLine.length > 120) return fail("Tên Line không được vượt quá 120 ký tự", 400, origin);
+      if (norm(oldLine) === norm(newLine)) return fail("Line mới phải khác Line cũ", 400, origin);
+      const { data, error } = await admin.from("employees").update({ line: newLine })
+        .eq("status", "active").eq("line", oldLine).select("id");
+      if (error) throw error;
+      const updated = (data || []).length;
+      let warning = "";
+      if (updated) {
+        try { await audit(user.username, "employee_line_bulk_update", oldLine + " -> " + newLine + "; " + updated + " nhan vien"); }
+        catch { warning = "Line đã đổi nhưng chưa ghi được nhật ký thao tác."; }
+      }
+      return reply({ ok: true, updated, oldLine, newLine, warning }, 200, origin);
+    }
     if (method === "POST" && route === "/api/employees/update") {
       requireRole(user, ["admin", "editor"]); const b = await req.json();
       const id = String(b.id || "").trim(), name = String(b.name || "").trim(), joinedRaw = String(b.joined || "").trim();
