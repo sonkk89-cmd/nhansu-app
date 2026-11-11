@@ -289,7 +289,7 @@ Deno.serve(async req => {
       requireRole(user, ["admin", "editor"]);
       const b = await req.json();
       const fields: Record<string, string> = { line: "line", vendor: "vendor", manager: "manager" };
-      const field = String(b.field || "").trim(), column = fields[field];
+      const field = String(b.field || "").trim(), column = Object.prototype.hasOwnProperty.call(fields, field) ? fields[field] : "";
       const oldValue = String(b.oldValue ?? "").trim(), newValue = String(b.newValue ?? "").trim();
       if (!column) return fail("Chỉ được cập nhật Line, Vendor hoặc Quản lý", 400, origin);
       if (!oldValue || !newValue) return fail("Chọn giá trị cũ và nhập giá trị mới", 400, origin);
