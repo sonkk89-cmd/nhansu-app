@@ -428,8 +428,45 @@ function vEmployees(){
  const q=nz(st.eq||''),a=q?all.filter(e=>nz([...e,deptById.get(String(e[0]))||''].join(' ')).includes(q)):all;
  const deptStatus=!canEdit?'<span class="note">Line Điểm Danh chỉ tải được với quyền nhập liệu hoặc quản trị.</span>':st.ckLoading?'<span class="note">Đang tải Line Điểm Danh trực tiếp...</span>':checkins?'<span class="note">Line Điểm Danh lấy trực tiếp cho ngày '+fd(checkins.date||st.ckDate||TD)+' · không lưu vào Supabase.</span>':'<span class="note">'+(st.ckError?esc(st.ckError)+' · ':'')+'Chưa tải được dữ liệu Line Điểm Danh.</span> <button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button>';
  const cell=v=>{const s=String(v??'');return '<span title="'+esc(s)+'">'+esc(s||'')+'</span>'};
- return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div><div class="tb" style="margin:6px 0 0">${deptStatus}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
+ return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${canEdit?'<button class="b g" onclick="openBulkLineModal()">Đổi Line hàng loạt</button>':''}${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div><div class="tb" style="margin:6px 0 0">${deptStatus}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
  tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[cell(e[0]),cell(e[1]),cell(fd(e[2])),cell(e[3]),cell(e[4]),cell(e[5]),cell(e[6]),cell(deptById.get(String(e[0]))||'—'),cell(e[7]),cell(e[8]),cell(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
+}
+
+function openBulkLineModal(){
+ if(!['admin','editor'].includes(D.me.role))return;
+ const lines=[...new Set(emps().map(e=>String(e[6]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+ if(!lines.length){alert('Chưa có Line trong danh sách nhân viên đang làm việc.');return}
+ const options=lines.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+ $('modal').innerHTML='<div class="mo"><div style="max-width:650px;width:min(650px,92vw);max-height:90vh;overflow:auto"><h3>Chuyển Line hàng loạt</h3><p class="note">Chỉ cập nhật cột Line của nhân viên đang làm việc trong DS nhân viên. Nhân viên đã nghỉ và lịch sử nghỉ không thay đổi.</p><div class="f"><div><label>Chọn Line cũ</label><select id="blOld" onchange="previewBulkLine()"><option value="">— Chọn Line cần chuyển —</option>'+options+'</select></div><div><label>Chuyển sang Line mới</label><input id="blNew" maxlength="120" placeholder="Nhập tên Line mới" oninput="previewBulkLine()"></div></div><div id="blPreview" class="card" style="margin:12px 0"></div><div id="blError" class="msg e"></div><div class="tb" style="margin-top:12px"><button id="blConfirm" class="b" onclick="bulkLineChange()">Xác nhận đổi Line</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
+ previewBulkLine();
+}
+function previewBulkLine(){
+ const oldLine=$('blOld')?.value||'',newLine=String($('blNew')?.value||'').trim();
+ const count=oldLine?emps().filter(e=>String(e[6]||'').trim()===oldLine).length:0;
+ const preview=$('blPreview');
+ if(preview)preview.innerHTML=oldLine?'<b>'+count+'</b> nhân viên đang làm việc có Line <b>'+esc(oldLine)+'</b> sẽ được chuyển'+(newLine?' sang <b>'+esc(newLine)+'</b>.':'.')+'<div class="note" style="margin-top:5px">Kiểm tra kỹ trước khi xác nhận. Nếu Line mới đã tồn tại, các nhân viên sẽ được gộp vào Line đó.</div>':'Chọn Line cũ để xem trước số nhân viên bị ảnh hưởng.';
+ const button=$('blConfirm');
+ if(button)button.disabled=!oldLine||!newLine||count===0||norm(oldLine)===norm(newLine)||newLine.length>120;
+}
+async function bulkLineChange(){
+ if(!['admin','editor'].includes(D.me.role))return;
+ const oldLine=String($('blOld')?.value||'').trim(),newLine=String($('blNew')?.value||'').trim();
+ const previewCount=oldLine?emps().filter(e=>String(e[6]||'').trim()===oldLine).length:0;
+ if(!oldLine||!newLine||!previewCount||norm(oldLine)===norm(newLine)){previewBulkLine();return}
+ if(!confirm('Chuyển '+previewCount+' nhân viên từ Line "'+oldLine+'" sang "'+newLine+'"?'))return;
+ const button=$('blConfirm'),error=$('blError');button.disabled=true;button.textContent='Đang cập nhật...';error.textContent='';
+ try{
+  const r=await HRCloud.api('/api/employees/bulk-line',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldLine,newLine})});
+  if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Không cập nhật được Line.');
+  closeM();
+  alert('Đã chuyển '+Number(j.updated||0)+' nhân viên từ "'+oldLine+'" sang "'+newLine+'".'+(j.warning?' '+j.warning:''));
+  await load();
+ }catch(e){
+  error.textContent=String(e?.message||'Không kết nối được máy chủ.');
+  button.disabled=false;button.textContent='Xác nhận đổi Line';
+ }
 }
 
 function openDeleteAllEmployees(){
