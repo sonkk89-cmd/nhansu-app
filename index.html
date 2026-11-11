@@ -70,7 +70,7 @@ main#app.employees-page{max-width:1400px;width:100%;padding-left:8px;padding-rig
  #app.employees-page th,#app.employees-page td{white-space:nowrap}
 }
 </style></head><body>
-<header class="topbar"><div class="topbar-in"><div class="brand-mark">Production - ILS</div><div class="head-copy"><h1>Báo cáo nhân sự – Bộ phận sản xuất</h1><div class="sub" id="sub"></div></div><div class="account"><span id="me"></span> · <a href="#" onclick="HRCloud.logout(event)">Đăng xuất</a></div></div></header>
+<header class="topbar"><div class="topbar-in"><div class="brand-mark">Production - ILS</div><div class="head-copy"><h1>Báo cáo nhân sự – Bộ phận sản xuất</h1><div class="sub" id="sub"></div></div><div class="account"><span id="me"></span> · <a href="#" onclick="openPasswordChange(event)">Đổi mật khẩu</a> · <a href="#" onclick="HRCloud.logout(event)">Đăng xuất</a></div></div></header>
 <nav id="nav"></nav><main id="app"></main><div id="modal"></div>
 <script>
 let D={E:[],R:[],L:[],me:{name:"",role:""}};
@@ -582,6 +582,32 @@ function setEx(b,n){window._ex={rows:b.map(e=>[e[0],e[1],e[3],e[4],e[5],e[6],e[7
 async function exList(){const x=window._ex;if(!x)return;const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào']].concat(x.rows)),'Danh sách');const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});XLSX.writeFile(wb,x.name+'.xlsx')}
 let IMP=null;
 const IMPN={adds:'Thêm nhân viên',res:'Báo nghỉ việc',leaves:'Báo nghỉ hằng ngày'};
+function openPasswordChange(event){
+ if(event)event.preventDefault();
+ $('modal').innerHTML='<div class="mo"><div style="max-width:500px;width:min(500px,92vw)"><h3>Đổi mật khẩu</h3><p class="note">Nhập mật khẩu hiện tại để xác nhận danh tính. Mật khẩu mới cần tối thiểu 8 ký tự. Sau khi đổi, trình duyệt này sẽ đăng xuất và bạn cần đăng nhập lại.</p><div class="f" style="grid-template-columns:1fr"><div><label>Mật khẩu hiện tại</label><input id="pwCurrent" type="password" autocomplete="current-password"></div><div><label>Mật khẩu mới</label><input id="pwNew" type="password" autocomplete="new-password"></div><div><label>Nhập lại mật khẩu mới</label><input id="pwConfirm" type="password" autocomplete="new-password"></div></div><div id="pwError" class="msg e"></div><div class="tb" style="margin-top:12px"><button id="pwSave" class="b" onclick="submitPasswordChange()">Đổi mật khẩu</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
+}
+async function submitPasswordChange(){
+ const currentPassword=$('pwCurrent')?.value||'',newPassword=$('pwNew')?.value||'',confirmPassword=$('pwConfirm')?.value||'';
+ const error=$('pwError'),button=$('pwSave');
+ if(!currentPassword){error.textContent='Nhập mật khẩu hiện tại.';return}
+ if(newPassword.length<8){error.textContent='Mật khẩu mới cần tối thiểu 8 ký tự.';return}
+ if(newPassword!==confirmPassword){error.textContent='Mật khẩu nhập lại chưa khớp.';return}
+ if(currentPassword===newPassword){error.textContent='Mật khẩu mới phải khác mật khẩu hiện tại.';return}
+ button.disabled=true;button.textContent='Đang cập nhật...';error.textContent='';
+ try{
+  const r=await HRCloud.api('/api/account/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword,newPassword,confirmPassword})});
+  if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Không đổi được mật khẩu.');
+  localStorage.removeItem('hr_access_token');
+  closeM();
+  alert('Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.');
+  location.href=window.HR_CONFIG.basePath+'login.html';
+ }catch(e){
+  error.textContent=String(e?.message||'Không kết nối được máy chủ.');
+  button.disabled=false;button.textContent='Đổi mật khẩu';
+ }
+}
 function closeM(){$('modal').innerHTML=''}
 const PASTE_SHEETS={
  adds:{label:'Thêm nhân viên',heads:['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Tên quản lý','Giới tính']},
