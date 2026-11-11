@@ -86,7 +86,7 @@ function tbl(h,rows,more){return `<div class="tw"><table><tr>${h.map(x=>`<th>${x
 function shiftKpi(a){const c=cnt(a,e=>e[3]),gs=r=>{const g=cnt(r,e=>{const n=nz(e[9]);return n==='nam'?'Nam':n==='nu'?'Nữ':'Khác'});return `Nam ${g.Nam||0} · Nữ ${g['Nữ']||0}${g['Khác']?' · Chưa rõ '+g['Khác']:''}`},s=k=>gs(a.filter(e=>e[3]===k));return kpi([['Tổng nhân lực',a.length,gs(a)],['Ca A',c.A||0,s('A')],['Ca C',c.C||0,s('C')],['Hành chính (HC)',c.HC||0,s('HC')]])}
 const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
 const eH=['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
-function setTab(i){if(i===11&&D.me.role==='viewer')return;tab=i;st.msg='';render();if(i===8)loadAdmin();if(i===11)loadCheckin()}
+function setTab(i){if(i===11&&D.me.role==='viewer')return;tab=i;st.msg='';render();if(i===8)loadAdmin();if((i===1||i===11)&&['admin','editor'].includes(D.me.role)&&(!st.checkins||st.checkins.date!==(st.ckDate||TD)))loadCheckin(st.ckDate||TD)}
 function go(k,v){st[k]=v;render()}
 function inp(k,v){st[k]=v;const p=document.activeElement.selectionStart;render();const el=document.querySelector('[data-k="'+k+'"]');if(el){el.focus();try{el.setSelectionRange(p,p)}catch(e){}}}
 
@@ -398,9 +398,12 @@ function vResign(){
 
 function vEmployees(){
  const all=emps().filter(e=>sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
- const q=nz(st.eq||''),a=q?all.filter(e=>nz(e.join(' ')).includes(q)):all,canEdit=['admin','editor'].includes(D.me.role);
- return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
+ const canEdit=['admin','editor'].includes(D.me.role),checkins=st.checkins?.date===(st.ckDate||TD)?st.checkins:null;
+ const deptById=new Map((checkins?.rows||[]).map(r=>[String(r.emp_id||'').trim(),String(r.department||'').trim()]));
+ const q=nz(st.eq||''),a=q?all.filter(e=>nz([...e,deptById.get(String(e[0]))||''].join(' ')).includes(q)):all;
+ const deptStatus=!canEdit?'<span class="note">Line Điểm Danh chỉ tải được với quyền nhập liệu hoặc quản trị.</span>':st.ckLoading?'<span class="note">Đang tải Line Điểm Danh trực tiếp...</span>':checkins?'<span class="note">Line Điểm Danh lấy trực tiếp cho ngày '+fd(checkins.date||st.ckDate||TD)+' · không lưu vào Supabase.</span>':'<span class="note">'+(st.ckError?esc(st.ckError)+' · ':'')+'Chưa tải được dữ liệu Line Điểm Danh.</span> <button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button>';
+ return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div><div class="tb" style="margin:6px 0 0">${deptStatus}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
+ tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(deptById.get(String(e[0]))||'')||'<span class="note">—</span>',esc(e[7]),esc(e[8]),esc(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
 }
 
 function openDeleteAllEmployees(){
@@ -654,8 +657,11 @@ function exportTabXlsx(){
   sheet('Vao moi 14 ngay',eh.slice(0,7),act.filter(e=>e[2]>=start&&e[2]<=st.day).map(e=>e.slice(0,7)));
   sheet('Nghi viec 14 ngay',rh,res.filter(e=>e[7]>=start&&e[7]<=st.day&&sf(e[3])).map(e=>[e[0],e[1],e[2],e[4],e[5],e[6],e[3],e[7],e[8]]));
  }else if(tab===1){
-  const q=nz(st.eq||''),a=act.filter(e=>sf(e[3])).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi')).filter(e=>!q||nz(e.join(' ')).includes(q));
-  sheet('DS nhan vien',eh,empRows(a));
+  const deptById=new Map((st.checkins?.rows||[]).map(r=>[String(r.emp_id||'').trim(),String(r.department||'').trim()]));
+  const q=nz(st.eq||''),a=act.filter(e=>sf(e[3])).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi')).filter(e=>!q||nz([...e,deptById.get(String(e[0]))||''].join(' ')).includes(q));
+  const deptHead=[...eh.slice(0,7),'Line Điểm Danh',...eh.slice(7)];
+  const deptRows=a.map(e=>[...e.slice(0,7),deptById.get(String(e[0]))||'',...e.slice(7)]);
+  sheet('DS nhan vien',deptHead,deptRows);
  }else if(tab===2){
   const a=act.filter(e=>e[6]===st.line&&sf(e[3])&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));
   sheet('Theo line',eh,empRows(a));label='Theo_line';
