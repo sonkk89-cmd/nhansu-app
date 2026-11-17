@@ -346,7 +346,7 @@ async function loadCheckin(date=st.ckDate||TD){
  st.ckDate=date;st.ckLoading=true;st.ckError='';render();
  try{
   const employeeIds=[...new Set((D.E||[]).map(e=>String(e[0]||'').trim()).filter(Boolean))];
-  const r=await HRCloud.api('/api/checkins/live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,employeeIds})});
+  const r=await HRCloud.api('/api/checkins/live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,employeeIds,workShift:st.ckWorkShift||'day'})});
   if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
   if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(r.status===404?'API chấm công trực tiếp chưa được triển khai trên Supabase.':(j.error||'Không tải được dữ liệu chấm công'))}
   st.checkins=await r.json();st.ckError=''
@@ -354,11 +354,12 @@ async function loadCheckin(date=st.ckDate||TD){
  st.ckLoading=false;render();
 }
 function checkinRows(){
- const source=new Map((st.checkins?.rows||[]).map(r=>[String(r.emp_id),r])),q=nz(st.ckQ||''),shift=st.ckShift||'All';
+ const source=new Map((st.checkins?.rows||[]).map(r=>[String(r.emp_id),r])),q=nz(st.ckQ||''),workShift=st.ckWorkShift||'day';
  return (D.E||[]).map(e=>{
-  const id=String(e[0]||'').trim(),hit=source.get(id),time=String(hit?.first_checkin_time||''),type=String(e[4]||'').trim();
-  return {emp_id:id,emp_name:String(e[1]||''),vendor:String(e[5]||'').trim()||type||'Chưa phân loại',line:String(e[6]||''),shift:String(e[3]||''),first_checkin_time:time,status:time?'Đi làm':'OFF'};
- }).filter(r=>r.emp_id&& (shift==='All'||r.shift===shift) && (!q||nz([r.emp_id,r.emp_name,r.vendor,r.line,r.shift].join(' ')).includes(q)));
+  const id=String(e[0]||'').trim(),hit=source.get(id),time=String(hit?.first_checkin_time||''),type=String(e[4]||'').trim(),rawWorkShift=String(e[10]||'').trim().toLowerCase();
+  const employeeWorkShift=rawWorkShift==='ca ngày'||rawWorkShift==='day'?'day':rawWorkShift==='ca đêm'||rawWorkShift==='night'?'night':'';
+  return {emp_id:id,emp_name:String(e[1]||''),vendor:String(e[5]||'').trim()||type||'Chưa phân loại',line:String(e[6]||''),shift:String(e[3]||''),work_shift:employeeWorkShift,first_checkin_time:time,status:time?'Đi làm':'OFF'};
+ }).filter(r=>r.emp_id&&r.work_shift===workShift&&(!q||nz([r.emp_id,r.emp_name,r.vendor,r.line,r.shift,r.work_shift].join(' ')).includes(q)));
 }
 function checkinPivot(rows){
  const groups={};rows.forEach(r=>{const key=r.vendor||'Chưa phân loại';groups[key]||={work:0,off:0,total:0};groups[key][r.first_checkin_time?'work':'off']++;groups[key].total++});
@@ -368,7 +369,7 @@ function checkinPivot(rows){
 }
 function vCheckin(){
  const day=st.ckDate||TD,at=st.checkins?.fetched_at?new Date(st.checkins.fetched_at).toLocaleString('vi-VN'):'';
- const head=`<div class="card checkin-hero"><div class="tb" style="justify-content:space-between;margin:0"><div><h2>CHẤM CÔNG SẢN XUẤT</h2><div class="note">Đối chiếu danh sách nhân viên trong tab DS nhân viên với giờ vào trong ngày</div></div><div class="checkin-toolbar"><label>Ngày <input id="ckDate" type="date" value="${esc(day)}" onchange="loadCheckin(this.value)"></label><label>Ca <select onchange="st.ckShift=this.value;render()"><option value="All" ${!st.ckShift||st.ckShift==='All'?'selected':''}>Tất cả ca</option><option value="A" ${st.ckShift==='A'?'selected':''}>Ca A</option><option value="C" ${st.ckShift==='C'?'selected':''}>Ca C</option><option value="HC" ${st.ckShift==='HC'?'selected':''}>HC</option></select></label><button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button></div></div></div>`;
+ const head=`<div class="card checkin-hero"><div class="tb" style="justify-content:space-between;margin:0"><div><h2>CHẤM CÔNG SẢN XUẤT</h2><div class="note">Đối chiếu danh sách nhân viên trong tab DS nhân viên với giờ vào trong ngày</div></div><div class="checkin-toolbar"><label>Ngày <input id="ckDate" type="date" value="${esc(day)}" onchange="loadCheckin(this.value)"></label><label>Ca làm việc <select onchange="st.ckWorkShift=this.value;loadCheckin(st.ckDate||TD)"><option value="day" ${(st.ckWorkShift||'day')==='day'?'selected':''}>Ca ngày</option><option value="night" ${st.ckWorkShift==='night'?'selected':''}>Ca đêm</option></select></label><button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button></div></div></div>`;
  if(st.ckLoading)return head+'<div class="card"><div class="note">Đang lấy dữ liệu trực tiếp từ hệ thống chấm công...</div></div>';
  if(st.ckError)return head+'<div class="card"><div class="msg e">'+esc(st.ckError)+'</div></div>';
  if(!st.checkins)return head+'<div class="card"><div class="note">Chọn ngày để tải dữ liệu chấm công.</div></div>';
@@ -377,7 +378,7 @@ function vCheckin(){
  pivotRows.push(['<b>TỔNG CỘNG</b>','<b class="checkin-work">'+pivot.work+'</b>','<b class="checkin-off">'+pivot.off+'</b>','<b>'+pivot.total+'</b>']);
  const summary=kpi([['ĐI LÀM',pivot.work],['OFF',pivot.off],['TỔNG NHÂN VIÊN',pivot.total]]);
  const detail=tbl(['Mã NV','Họ tên','Nhóm Vendor / Loại','Line','Ca','Giờ vào','Trạng thái'],rows.map(r=>[esc(r.emp_id),esc(r.emp_name),esc(r.vendor),esc(r.line),esc(r.shift),r.first_checkin_time?esc(String(r.first_checkin_time).replace('T',' ')):'<span class="note">—</span>',r.first_checkin_time?'<span class="checkin-badge">Đi làm</span>':'<span class="checkin-badge off">OFF</span>']));
- return head+'<div class="note">Ngày '+fd(st.checkins.date||day)+' · lấy trực tiếp lúc '+esc(at)+' · chỉ gồm nhân viên có trong DS nhân viên của app; không lưu lịch sử.</div><div class="note">OFF = nhân viên trong DS nhân viên chưa có giờ check-in ở nguồn trong ngày đã chọn.</div><div class="checkin-summary">'+summary+'</div><div class="card checkin-pivot-card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Tổng hợp theo Vendor / loại nhân lực</h3><div class="note">Bảng tổng hợp dạng Pivot theo ca đang chọn</div></div><span class="tag">'+(st.ckShift&&st.ckShift!=='All'?'Ca '+esc(st.ckShift):'Tất cả ca')+'</span></div>'+tbl(['Vendor / Loại nhân lực','Đi làm','OFF','Grand Total'],pivotRows)+'</div><div class="card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Danh sách sản xuất và giờ vào</h3><div class="note">'+rows.length+' nhân viên theo bộ lọc hiện tại</div></div><input data-k="ckQ" placeholder="Tìm mã NV, tên, Vendor, Line..." value="'+esc(q)+'" oninput="inp(\'ckQ\',this.value)" style="min-width:250px"></div>'+detail+'</div>';
+ return head+'<div class="note">Ngày '+fd(st.checkins.date||day)+' · lấy trực tiếp lúc '+esc(at)+' · chỉ gồm nhân viên có trong DS nhân viên của app; không lưu lịch sử.</div><div class="note">OFF = nhân viên trong DS nhân viên chưa có giờ check-in ở nguồn trong ngày đã chọn.</div><div class="checkin-summary">'+summary+'</div><div class="card checkin-pivot-card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Tổng hợp theo Vendor / loại nhân lực</h3><div class="note">Bảng tổng hợp dạng Pivot theo ca đang chọn</div></div><span class="tag">'+((st.ckWorkShift||'day')==='night'?'Ca đêm':'Ca ngày')+'</span></div>'+tbl(['Vendor / Loại nhân lực','Đi làm','OFF','Grand Total'],pivotRows)+'</div><div class="card"><div class="tb" style="justify-content:space-between"><div><h3 style="margin:0">Danh sách sản xuất và giờ vào</h3><div class="note">'+rows.length+' nhân viên theo bộ lọc hiện tại</div></div><input data-k="ckQ" placeholder="Tìm mã NV, tên, Vendor, Line..." value="'+esc(q)+'" oninput="inp(\'ckQ\',this.value)" style="min-width:250px"></div>'+detail+'</div>';
 }
 function toggleResignWeekday(i,checked){
  const selected=Array.isArray(st.resignWeekdays)?st.resignWeekdays.map(Number):[];
