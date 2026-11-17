@@ -67,7 +67,7 @@ function dateValue(v: unknown) {
   const d = new Date(`${iso}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : "";
 }
-async function fetchLiveCheckins(date: string, employeeIds: string[]) {
+async function fetchLiveCheckins(date: string, employeeIds: string[], workShift: string) {
   // Accept Cookie or Set-Cookie input, but forward only cookie pairs, never Set-Cookie attributes.
   const cookie = (Deno.env.get("ILSUNGTECH_COOKIE") || "")
     .replace(/^\s*(?:Set-)?Cookie:\s*/i, "")
@@ -83,7 +83,7 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
   const body = new URLSearchParams({
     target_date: date,
     shift_type: "",
-    work_shift: Deno.env.get("ILSUNGTECH_WORK_SHIFT") || "day",
+    work_shift: workShift,
     departments: "[]",
     include_completed_for_closed_sessions: "1",
     force_refresh: "0",
@@ -151,7 +151,7 @@ async function fetchLiveCheckins(date: string, employeeIds: string[]) {
     operation: String(e.operation ?? "").trim(),
   })).filter((e: any) => e.emp_id && allowedIds.has(e.emp_id));
   const checkedIn = rows.filter((e: any) => Boolean(e.first_checkin_time)).length;
-  return { date, rows, total: rows.length, checkedIn, noCheckin: rows.length - checkedIn, fetched_at: new Date().toISOString() };
+  return { date, work_shift: workShift, rows, total: rows.length, checkedIn, noCheckin: rows.length - checkedIn, fetched_at: new Date().toISOString() };
 }
 async function validateImport(body: any) {
   const [er, leaveRows] = await Promise.all([
@@ -383,7 +383,9 @@ Deno.serve(async req => {
         : [];
       if (employeeIds.length > 5000) return fail("Danh sách nhân viên vượt giới hạn xử lý", 400, origin);
       if (!employeeIds.length) return reply({ date: requestedDate, rows: [], total: 0, checkedIn: 0, noCheckin: 0, fetched_at: new Date().toISOString() }, 200, origin);
-      const report = await fetchLiveCheckins(requestedDate, employeeIds);
+      const requestedWorkShift = String(body.workShift || "day").toLowerCase();
+      if (!["day", "night"].includes(requestedWorkShift)) return fail("Ca làm việc không hợp lệ (day/night)", 400, origin);
+      const report = await fetchLiveCheckins(requestedDate, employeeIds, requestedWorkShift);
       return reply(report, 200, origin);
     }
     if (method === "DELETE" && route.startsWith("/api/employees/")) {
