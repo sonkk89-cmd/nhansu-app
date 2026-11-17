@@ -61,7 +61,8 @@ main#app.employees-page{max-width:1400px;width:100%;padding-left:8px;padding-rig
 #app.employees-page th:nth-child(9){width:11%}
 #app.employees-page th:nth-child(10){width:9%}
 #app.employees-page th:nth-child(11){width:5%}
-#app.employees-page th:nth-child(12){width:8%}
+#app.employees-page th:nth-child(12){width:7%}
+#app.employees-page th:nth-child(13){width:8%}
 #app.employees-page td:last-child button{padding:3px 5px!important;font-size:10px!important;white-space:nowrap}
 @media(max-width:760px){
  main#app.employees-page{padding-left:10px;padding-right:10px}
@@ -94,7 +95,7 @@ function empsAt(day){
  const rd=new Map();
  Object.keys(S.res).forEach(id=>rd.set(String(id),S.res[id][0]||''));
  D.R.forEach(r=>rd.set(String(r[0]),r[7]||''));
- const old=D.R.map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[10]||'',r[11]||'',r[12]||'']);
+ const old=D.R.map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[10]||'',r[11]||'',r[12]||'',r[13]||null]);
  return D.E.concat(S.adds,old).filter(e=>{
   const id=String(e[0]),j=e[2]||'';
   if(j&&j>day)return false;
@@ -102,21 +103,23 @@ function empsAt(day){
   return true;
  });
 }
-function resigned(){return D.E.concat(S.adds).filter(e=>S.res[e[0]]).map(e=>[e[0],e[1],e[2],e[3],e[4],e[5],e[6],S.res[e[0]][0],S.res[e[0]][1],1]).concat(D.R).sort((a,b)=>(b[7]||'').localeCompare(a[7]||''))}
+function resigned(){return D.E.concat(S.adds).filter(e=>S.res[e[0]]).map(e=>[e[0],e[1],e[2],e[3],e[4],e[5],e[6],S.res[e[0]][0],S.res[e[0]][1],1,e[7]||'',e[8]||'',e[9]||'',e[10]||null]).concat(D.R).sort((a,b)=>(b[7]||'').localeCompare(a[7]||''))}
 function leaves(){return D.L.map(x=>x.concat(1)).concat(S.leaves.map(x=>x.concat(1)))}
 function bars(o,tot,click){const m=Math.max(1,...Object.values(o));return Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar ${click?'cl':''}" ${click?`onclick="${click}('${esc(k).replace(/'/g,"\\'")}')"`:''}><span title="${esc(k)}">${esc(k)}</span><span class="t"><i style="width:${v/m*100}%"></i></span><b>${v}</b></div>`).join('')||'<div class="note">Không có dữ liệu</div>'}
 function barsO(keys,o){const m=Math.max(1,...keys.map(k=>o[k]||0));return keys.map(k=>`<div class="bar"><span>${esc(k)}</span><span class="t"><i style="width:${(o[k]||0)/m*100}%"></i></span><b>${o[k]||0}</b></div>`).join('')}
 function kpi(a){return `<div class="grid">${a.map(([k,v,s])=>`<div class="card"><div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="k" style="margin-top:2px">${s}</div>`:''}</div>`).join('')}</div>`}
 function tbl(h,rows,more){return `<div class="tw"><table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${c??''}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${h.length}" class="note">Không có dữ liệu</td></tr>`}</table></div>${more||''}`}
 function shiftKpi(a){const c=cnt(a,e=>e[3]),gs=r=>{const g=cnt(r,e=>{const n=nz(e[9]);return n==='nam'?'Nam':n==='nu'?'Nữ':'Khác'});return `Nam ${g.Nam||0} · Nữ ${g['Nữ']||0}${g['Khác']?' · Chưa rõ '+g['Khác']:''}`},s=k=>gs(a.filter(e=>e[3]===k));return kpi([['Tổng nhân lực',a.length,gs(a)],['Ca A',c.A||0,s('A')],['Ca C',c.C||0,s('C')],['Hành chính (HC)',c.HC||0,s('HC')]])}
-const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
-const eH=['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
+const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[10]||'Chưa phân ca'),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
+const eH=['Mã NV','Họ tên','Ca','Ca làm việc','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
 function setTab(i){if(i===11&&D.me.role==='viewer')return;tab=i;st.msg='';render();if(i===8)loadAdmin();if((i===1||i===11)&&['admin','editor'].includes(D.me.role)&&(!st.checkins||st.checkins.date!==(st.ckDate||TD)))loadCheckin(st.ckDate||TD)}
 function go(k,v){st[k]=v;render()}
 function inp(k,v){st[k]=v;const p=document.activeElement.selectionStart;render();const el=document.querySelector('[data-k="'+k+'"]');if(el){el.focus();try{el.setSelectionRange(p,p)}catch(e){}}}
 
 function tg(s){const i=st.sh.indexOf(s);i>=0?st.sh.splice(i,1):st.sh.push(s);render()}
 const sf=s=>st.sh.length===3||st.sh.includes(s);
+const wf=e=>!st.wsh||String(e?.[13]??e?.[10]??'')===st.wsh;
+const wfId=id=>{const e=[...D.E,...D.R,...S.adds].find(x=>String(x?.[0])===String(id));return !st.wsh||String(e?.[13]??e?.[10]??'')===st.wsh;};
 function chkb(){return `<div class="tb"><span class="k">Hiển thị ca:</span>${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>`<label class="card" style="margin:0;padding:7px 12px;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.sh.includes(k)?'checked':''} onchange="tg('${k}')">${l}</label>`).join('')}</div>`}
 function tgT(k){const i=st.lt.indexOf(k);i>=0?st.lt.splice(i,1):st.lt.push(k);render()}
 function ltCards(f){const T=[['Chính thức','Chính thức'],['Thời vụ','Thời vụ'],['Sinh viên','Sinh viên'],['?','Chưa có trong DS']];return `<div class="grid">${T.map(([k,l])=>{const n=f.filter(x=>(x[4]||'?')===k).length,on=st.lt.includes(k);return `<label class="card cl ${on?'sel':''}" style="display:block"><div style="display:flex;gap:8px;align-items:center"><input type="checkbox" ${on?'checked':''} onchange="tgT('${k}')"><span class="k">${l}</span></div><div class="v">${n}</div><div class="k">người nghỉ · tích để xem danh sách</div></label>`}).join('')}</div>`}
@@ -149,23 +152,23 @@ function vEmpLeave(){
 }
 function selectLeaveHistory(id){st.le=String(id);render()}
 function exportOverviewWorking(){
- const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
+ const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3])&&wfId(x[0]));
  const leaveIds=new Set(allL.map(x=>String(x[0])));
- const rows=empsAt(st.day).filter(e=>sf(e[3])&&!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
+ const rows=empsAt(st.day).filter(e=>sf(e[3])&&wf(e)&&!leaveIds.has(String(e[0]))).sort((x,y)=>String(x[0]).localeCompare(String(y[0]),'vi'));
  const wb=XLSX.utils.book_new();
- const data=[eH,...rows.map(e=>[e[0],e[1],e[3],e[4],e[5],e[6],e[7],e[8],fd(e[2])])];
+ const data=[eH,...rows.map(e=>[e[0],e[1],e[3],e[10]||'Chưa phân ca',e[4],e[5],e[6],e[7],e[8],fd(e[2])])];
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nhan luc di lam');
  XLSX.writeFile(wb,'Nhan_luc_di_lam_'+st.day+'.xlsx');
 }
 function exportOverviewDaily(){
- const rows=leaves().filter(x=>x[7]===st.day&&sf(x[3])).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
+ const rows=leaves().filter(x=>x[7]===st.day&&sf(x[3])&&wfId(x[0])).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
  const data=[['Mã NV','Họ tên','Line','Ca','Loại nhân lực','Loại nghỉ','Lý do','Ngày'],...rows.map(x=>[x[0],x[1],x[2],x[3],x[4],CODE[x[5]]||x[5],x[6],fd(x[7])])];
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nghi hang ngay');
  XLSX.writeFile(wb,'Nhan_luc_nghi_hang_ngay_'+st.day+'.xlsx');
 }
 function exportOverviewResigned(){
- const rows=resigned().filter(e=>sf(e[3])).sort((x,y)=>String(y[7]||'').localeCompare(String(x[7]||'')));
+ const rows=resigned().filter(e=>sf(e[3])&&wf(e)).sort((x,y)=>String(y[7]||'').localeCompare(String(x[7]||'')));
  const data=[['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Ngày nghỉ','Lý do'],...rows.map(x=>[x[0],x[1],fd(x[2]),x[3],x[4],x[5],x[6],fd(x[7]),x[8]||''])];
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nghi viec');
@@ -176,7 +179,7 @@ function ovAtt(a){
  const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
  const leaveIds=new Set(allL.map(x=>String(x[0])));
  const n=a.filter(e=>leaveIds.has(String(e[0]))).length,w=a.length-n;
- const gone=resigned().filter(e=>e[7]===st.day&&sf(e[3]));
+ const gone=resigned().filter(e=>e[7]===st.day&&sf(e[3])&&wf(e));
  const pc=a.length?(n/a.length*100).toFixed(1):'0.0';
  const byType=['Chính thức','Thời vụ','Sinh viên'].map(type=>{const x=a.filter(e=>e[4]===type),daily=x.filter(e=>leaveIds.has(String(e[0]))).length,work=x.length-daily,off=gone.filter(e=>e[4]===type).length,rate=x.length?(work/x.length*100).toFixed(1)+'%':'0%';return [type,work,daily,off,rate]});
  const tile=(k,l,v,c)=>`<div class="card cl ${st.ovDetail===k?'sel':''}" onclick="setOverviewDetail('${k}')" style="flex:1;margin:0;border-left:4px solid ${c};padding:10px 12px;cursor:pointer"><div class="k">${l} </div><div class="v" style="font-size:24px">${v}</div></div>`;
@@ -194,7 +197,7 @@ function ovAtt(a){
  return `<div style="margin-top:14px"><div class="k" style="margin-bottom:6px">Tình trạng nhân lực – ngày ${fd(st.day)}</div><div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">${tile('working','Nhân lực đi làm',w,CL.w)}${tile('daily','Nhân lực nghỉ hằng ngày',n,CL.a)}${tile('resigned','Nhân lực nghỉ việc',gone.length,'var(--er)')}</div><div class="k" style="margin:0 0 8px">Tỷ lệ nghỉ hằng ngày: ${pc}%</div>${tbl(['Ca','Đi làm','Nghỉ hằng ngày','Nghỉ việc','Tỷ lệ đi làm'],['A','C','HC'].map(c=>{const x=a.filter(e=>e[3]===c),k=x.filter(e=>leaveIds.has(String(e[0]))).length,r=gone.filter(e=>e[3]===c).length,work=x.length-k,rate=x.length?((work/x.length)*100).toFixed(1)+'%':'0%';return [c==='HC'?'HC':'Ca '+c,work,k,r,rate]}))}<h3 style="margin:14px 0 8px">Tình hình theo loại nhân lực</h3>${tbl(['Loại nhân lực','Đi làm','Nghỉ hằng ngày','Nghỉ việc','Tỷ lệ đi làm'],byType)}${detail}</div>`;
 }
 function vNew(){
- const day=st.newDay||TD,act=emps().filter(e=>sf(e[3])),rs=resigned().filter(e=>sf(e[3])),o={};
+ const day=st.newDay||TD,act=emps().filter(e=>sf(e[3])&&wf(e)),rs=resigned().filter(e=>sf(e[3])&&wf(e)),o={};
  for(let i=13;i>=0;i--){const d=new Date(day+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-i);o[d.toISOString().slice(0,10)]=0}
  act.concat(rs).forEach(e=>{if(e[2] in o)o[e[2]]++});
  const q={};Object.keys(o).forEach(k=>q[k]=0);rs.forEach(e=>{if(e[7] in q)q[e[7]]++});
@@ -208,15 +211,15 @@ function vNew(){
  return `<div class="card" style="margin-top:12px"><h3>Nhân viên vào mới (theo ngày vào) – ${n} người ngày ${fd(day)}${n?' ('+Object.entries(tp).map(([k,v])=>k+' '+v).join(' · ')+')':''}</h3><div class="tb" style="margin:2px 0 8px"><label style="font-size:12px;color:var(--mu);font-weight:600">Lịch xem riêng <input type="date" value="${day}" onchange="go('newDay',this.value)" style="display:block;margin-top:4px"></label><span class="note">Lịch này độc lập với ngày xem ở các biểu đồ tổng quan phía trên.</span></div><div class="note" style="margin:0 0 6px">7 ngày gần nhất: <b>${sum(7)}</b> · 14 ngày: <b>${sum(14)}</b> · nghỉ việc 7 ngày: <b>${ks.slice(-7).reduce((s,k)=>s+q[k],0)}</b> · <span style="color:var(--ok)">■ Vào mới</span> <span style="color:var(--er)">■ Nghỉ việc</span> · bấm vào cột để chọn ngày</div><div style="display:flex;gap:4px;align-items:flex-end;height:170px;overflow-x:auto;padding-top:6px">${col}</div>${detail}</div>`
 }
 const CL={w:'var(--bar)',a:'var(--wr)',r:'var(--er)'};
-function ovData(kf,ft){const day=st.day,ym=day.slice(0,7),ab=new Set(leaves().filter(x=>x[7]===day).map(x=>x[0])),o={},g=k=>{k=k||'(trống)';return o[k]||(o[k]={w:0,a:0,r:0})};
- empsAt(day).filter(e=>sf(e[3])&&(!ft||ft(e))).forEach(e=>{g(kf(e))[ab.has(e[0])?'a':'w']++});
- resigned().filter(x=>x[7]===day&&sf(x[3])&&(!ft||ft(x))).forEach(x=>g(kf(x)).r++);return o}
+function ovData(kf,ft){const day=st.day,ym=day.slice(0,7),ab=new Set(leaves().filter(x=>x[7]===day&&wfId(x[0])).map(x=>x[0])),o={},g=k=>{k=k||'(trống)';return o[k]||(o[k]={w:0,a:0,r:0})};
+ empsAt(day).filter(e=>sf(e[3])&&wf(e)&&(!ft||ft(e))).forEach(e=>{g(kf(e))[ab.has(e[0])?'a':'w']++});
+ resigned().filter(x=>x[7]===day&&sf(x[3])&&wf(x)&&(!ft||ft(x))).forEach(x=>g(kf(x)).r++);return o}
 function ovCtl(){return `<div class="tb"><span class="k">Ngày:</span><input type="date" value="${st.day}" onchange="go('day',this.value)">${[['w','Đi làm'],['a','Nghỉ trong ngày'],['r','Nghỉ việc trong ngày']].map(([k,l])=>`<span style="display:flex;gap:5px;align-items:center"><i style="width:12px;height:12px;border-radius:3px;background:${CL[k]}"></i>${l}</span>`).join('')}<span class="note" style="flex-basis:100%;margin:0">Số liệu theo ngày đã chọn: chỉ tính người đã vào làm đến ngày đó và chưa nghỉ việc tại ngày đó.</span></div>`}
 function vstack(o){const m=Math.max(1,...Object.values(o).map(v=>v.w+v.a+v.r)),h=v=>`height:${v/m*80}px`;return `<div class="overview-line-chart-bars" style="display:flex;gap:6px;align-items:flex-end;height:130px;overflow-x:auto;padding-top:6px">${Object.entries(o).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`<div class="cl" title="${esc(k)}: đi làm ${v.w}, nghỉ ${v.a}, nghỉ việc ${v.r}" onclick="selectOverviewLine(${esc(JSON.stringify(k))})" style="flex:1;min-width:52px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><span style="font-size:11px;white-space:nowrap"><b style="color:${CL.w}">${v.w}</b>·<b style="color:${CL.a}">${v.a}</b>·<b style="color:${CL.r}">${v.r}</b></span><div style="width:68%;display:flex;flex-direction:column;margin-top:2px"><i style="${h(v.r)};background:${CL.r}"></i><i style="${h(v.a)};background:${CL.a}"></i><i style="${h(v.w)};background:${CL.w}"></i></div><span style="font-size:11px;color:var(--mu);margin-top:4px;text-align:center;line-height:1.2">${esc(k.replace('Line ',''))}</span></div>`).join('')}</div>`}
 function hstack(o){const T=v=>v.w+v.a+v.r,m=Math.max(1,...Object.values(o).map(T));return Object.entries(o).sort((a,b)=>T(b[1])-T(a[1])).map(([k,v])=>`<div class="bar" style="grid-template-columns:110px 1fr 92px"><span title="${esc(k)}">${esc(k)}</span><span class="t" style="display:flex;overflow:hidden">${['w','a','r'].map(c=>`<i style="width:${v[c]/m*100}%;min-width:0;border-radius:0;background:${CL[c]}"></i>`).join('')}</span><b style="font-size:12px"><span style="color:${CL.w}">${v.w}</span>·<span style="color:${CL.a}">${v.a}</span>·<span style="color:${CL.r}">${v.r}</span></b></div>`).join('')||'<div class="note">Không có dữ liệu</div>'}
 function vbars(o){const m=Math.max(1,...Object.values(o));return `<div style="display:flex;gap:6px;align-items:flex-end;height:220px;overflow-x:auto;padding-top:6px">${Object.entries(o).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>`<div class="cl" title="${esc(k)}" onclick="goLine('${esc(k)}')" style="flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><b style="font-size:12px">${v}</b><i style="display:block;width:68%;border-radius:4px 4px 0 0;background:var(--bar);min-height:2px;height:${v/m*150}px"></i><span style="font-size:11px;color:var(--mu);margin-top:4px;text-align:center;line-height:1.2">${esc(k.replace('Line ',''))}</span></div>`).join('')}</div>`}
-function vOverview(){const all=empsAt(st.day),a=all.filter(e=>st.sh.includes(e[3]));const t=cnt(a,e=>e[4]);const tv=a.filter(e=>e[4]==='Thời vụ');
- const chk=`<div class="tb"><span class="k">Hiển thị ca:</span>${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>`<label class="card" style="margin:0;padding:7px 12px;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.sh.includes(k)?'checked':''} onchange="tg('${k}')">${l}</label>`).join('')}</div>`;
+function vOverview(){const all=empsAt(st.day),a=all.filter(e=>st.sh.includes(e[3])&&wf(e));const t=cnt(a,e=>e[4]);const tv=a.filter(e=>e[4]==='Thời vụ');
+ const chk=`<div class="tb"><span class="k">Hiển thị ca:</span>${[['A','Ca A'],['C','Ca C'],['HC','HC']].map(([k,l])=>`<label class="card" style="margin:0;padding:7px 12px;cursor:pointer;display:flex;gap:6px;align-items:center"><input type="checkbox" ${st.sh.includes(k)?'checked':''} onchange="tg('${k}')">${l}</label>`).join('')}<span class="k" style="margin-left:8px">Ca làm việc:</span><select onchange="go('wsh',this.value)"><option value="">Tất cả</option><option value="Ca ngày" ${st.wsh==='Ca ngày'?'selected':''}>Ca ngày</option><option value="Ca đêm" ${st.wsh==='Ca đêm'?'selected':''}>Ca đêm</option></select></div>`;
  const mx={};a.forEach(e=>{const k=(e[4]||'(trống)')+'|'+e[3];mx[k]=(mx[k]||0)+1});
  const types=[...new Set(a.map(e=>e[4]||'(trống)'))];
  return chk+ovCtl()+shiftKpi(a)+`<div class="cols"><div class="card"><h3>Ca làm việc × loại nhân lực</h3>${tbl(['Loại','Ca A','Ca C','HC','Tổng'],types.map(x=>[x,mx[x+'|A']||0,mx[x+'|C']||0,mx[x+'|HC']||0,t[x]||0]))}${ovAtt(a)}</div>
@@ -228,9 +231,9 @@ function goLine(k){st.line=k;tab=1;render()}
 function closeOverviewLine(){st.ovLine='';st.ovLineQ='';render()}
 function vOverviewLineDetail(){
  if(!st.ovLine)return '';
- const all=empsAt(st.day).filter(e=>e[6]===st.ovLine&&sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
+ const all=empsAt(st.day).filter(e=>e[6]===st.ovLine&&sf(e[3])&&wf(e)).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
  const q=nz(st.ovLineQ||''),rows=all.filter(e=>!q||nz(e.join(' ')).includes(q));
- const gone=resigned().filter(e=>e[6]===st.ovLine&&e[7]===st.day&&sf(e[3]));
+ const gone=resigned().filter(e=>e[6]===st.ovLine&&e[7]===st.day&&sf(e[3])&&wf(e));
  return `<div class="card" style="margin-top:8px"><div class="tb" style="justify-content:space-between"><div><h3>Danh sách nhân viên theo line: ${esc(st.ovLine)}</h3><div class="note">Đang làm việc: ${rows.length}/${all.length} người theo các ca đang chọn.</div></div><button class="b g" onclick="closeOverviewLine()">Đóng danh sách</button></div><div class="tb"><input data-k="ovLineQ" placeholder="Tìm mã NV, họ tên, quản lý..." value="${esc(st.ovLineQ||'')}" oninput="inp('ovLineQ',this.value)" style="min-width:240px"></div>${tbl(eH,rows.map(eRow))}${gone.length?`<div style="margin-top:12px"><h3>Nhân viên nghỉ việc trong ngày ${fd(st.day)} trên line này: ${gone.length}</h3>`+tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Ngày nghỉ','Lý do'],gone.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),fd(e[7]),esc(e[8])||'<span class="note">(chưa ghi lý do)</span>']))+`</div>`:''}</div>`
 }
 function vLine(){const a=emps(),ls=Object.keys(cnt(a,e=>e[6])).sort();if(!st.line)st.line=ls[0];
@@ -430,7 +433,7 @@ function vEmployees(){
  const deptStatus=!canEdit?'<span class="note">Line Điểm Danh chỉ tải được với quyền nhập liệu hoặc quản trị.</span>':st.ckLoading?'<span class="note">Đang tải Line Điểm Danh trực tiếp...</span>':checkins?'<span class="note">Line Điểm Danh lấy trực tiếp cho ngày '+fd(checkins.date||st.ckDate||TD)+' · không lưu vào Supabase.</span>':'<span class="note">'+(st.ckError?esc(st.ckError)+' · ':'')+'Chưa tải được dữ liệu Line Điểm Danh.</span> <button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button>';
  const cell=v=>{const s=String(v??'');return '<span title="'+esc(s)+'">'+esc(s||'')+'</span>'};
  return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${canEdit?'<button class="b g" onclick="openBulkFieldModal()">Đổi hàng loạt Line / Vendor / Quản lý</button>':''}${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div><div class="tb" style="margin:6px 0 0">${deptStatus}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[cell(e[0]),cell(e[1]),cell(fd(e[2])),cell(e[3]),cell(e[4]),cell(e[5]),cell(e[6]),cell(deptById.get(String(e[0]))||'—'),cell(e[7]),cell(e[8]),cell(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
+ tbl(['Mã NV','Họ tên','Ngày vào','Ca','Ca làm việc','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[cell(e[0]),cell(e[1]),cell(fd(e[2])),cell(e[3]),cell(e[10]||'Chưa phân ca'),cell(e[4]),cell(e[5]),cell(e[6]),cell(deptById.get(String(e[0]))||'—'),cell(e[7]),cell(e[8]),cell(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
 }
 
 function bulkFieldInfo(key){
@@ -514,14 +517,14 @@ function editEmployee(id){
  const genders=[...new Set(['','Nam','Nữ',e[9]||''])];
  $('modal').innerHTML=`<div class="mo"><div style="max-width:760px;max-height:90vh;overflow:auto"><h3>Sửa thông tin nhân viên</h3><p class="note">Mã NV: <b>${esc(e[0])}</b> (không thể thay đổi mã)</p>
  <div class="f"><div><label>Họ tên *</label><input id="eeName" value="${esc(e[1])}"></div><div><label>Ngày vào</label><input id="eeJoined" type="date" value="${esc(e[2])}"></div>
- <div><label>Ca *</label><select id="eeShift">${opts(['A','C','HC'],e[3])}</select></div><div><label>Loại nhân lực *</label><select id="eeType">${opts(TYPES,e[4])}</select></div>
+ <div><label>Ca *</label><select id="eeShift">${opts(['A','C','HC'],e[3])}</select></div><div><label>Ca làm việc</label><select id="eeWorkShift">${opts(['','Ca ngày','Ca đêm'],e[10]||'')}</select></div><div><label>Loại nhân lực *</label><select id="eeType">${opts(TYPES,e[4])}</select></div>
  <div><label>Vendor</label><input id="eeVendor" value="${esc(e[5])}"></div><div><label>Line *</label><input id="eeLine" value="${esc(e[6])}"></div>
  <div><label>Chức vụ</label><input id="eeTitle" value="${esc(e[7])}"></div><div><label>Tên quản lý</label><input id="eeManager" value="${esc(e[8])}"></div>
  <div><label>Giới tính</label><select id="eeGender">${opts(genders,e[9]||'')}</select></div></div><div id="eeError" class="msg e"></div>
  <div class="tb" style="margin-top:10px"><button class="b" onclick="saveEmployeeEdit(${esc(JSON.stringify(e[0]))})">Lưu thay đổi</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
 }
 async function saveEmployeeEdit(id){
- const b={id,name:$('eeName').value.trim(),joined:$('eeJoined').value||null,shift:$('eeShift').value,type:$('eeType').value,vendor:$('eeVendor').value.trim(),line:$('eeLine').value.trim(),title:$('eeTitle').value.trim(),manager:$('eeManager').value.trim(),gender:$('eeGender').value};
+ const b={id,name:$('eeName').value.trim(),joined:$('eeJoined').value||null,shift:$('eeShift').value,type:$('eeType').value,vendor:$('eeVendor').value.trim(),line:$('eeLine').value.trim(),title:$('eeTitle').value.trim(),manager:$('eeManager').value.trim(),gender:$('eeGender').value,work_shift:$('eeWorkShift').value};
  if(!b.name||!b.line){$('eeError').textContent='Vui lòng nhập Họ tên và Line.';return}
  try{
   const r=await HRCloud.api('/api/employees/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
@@ -532,7 +535,7 @@ async function saveEmployeeEdit(id){
  }catch(e){$('eeError').textContent='Không kết nối được máy chủ.'}
 }
 function vManage(){const a=!st.mq?[]:emps().filter(e=>sf(e[3])&&nz(e.join(' ')).includes(nz(st.mq))),lines=[...new Set(emps().map(e=>e[6]))].sort(),vs=[...new Set(emps().map(e=>e[5]).filter(Boolean))].sort();
- return `<div class="card"><h3>Thêm nhân viên mới</h3><div class="f"><div><label>Mã NV *</label><input id="nI" oninput="clearEmpMsg()"></div><div><label>Họ tên *</label><input id="nN"></div><div><label>Ngày vào *</label><input id="nD" type="date"></div><div><label>Ca *</label><select id="nC"><option>A</option><option>C</option><option>HC</option></select></div><div><label>Loại nhân lực *</label><select id="nT">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div><div><label>Vendor</label><input id="nV" list="vl"><datalist id="vl">${vs.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Line *</label><input id="nL" list="ll"><datalist id="ll">${lines.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Chức vụ</label><input id="nP"></div><div><label>Tên quản lý</label><input id="nM"></div><div><label>Giới tính</label><select id="nG"><option></option><option>Nam</option><option>Nữ</option></select></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addEmp()">Thêm nhân viên</button><button class="b g" onclick="exportXlsx()">Xuất Excel (đã cập nhật)</button><button class="b" onclick="openPasteImport()">Nhập từ Excel</button><span id="empMsg" class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div></div>
+ return `<div class="card"><h3>Thêm nhân viên mới</h3><div class="f"><div><label>Mã NV *</label><input id="nI" oninput="clearEmpMsg()"></div><div><label>Họ tên *</label><input id="nN"></div><div><label>Ngày vào *</label><input id="nD" type="date"></div><div><label>Ca *</label><select id="nC"><option>A</option><option>C</option><option>HC</option></select></div><div><label>Ca làm việc</label><select id="nW"><option value="">Chưa phân ca</option><option>Ca ngày</option><option>Ca đêm</option></select></div><div><label>Loại nhân lực *</label><select id="nT">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div><div><label>Vendor</label><input id="nV" list="vl"><datalist id="vl">${vs.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Line *</label><input id="nL" list="ll"><datalist id="ll">${lines.map(v=>`<option>${esc(v)}`).join('')}</datalist></div><div><label>Chức vụ</label><input id="nP"></div><div><label>Tên quản lý</label><input id="nM"></div><div><label>Giới tính</label><select id="nG"><option></option><option>Nam</option><option>Nữ</option></select></div></div><div class="tb" style="margin-top:10px"><button class="b" onclick="addEmp()">Thêm nhân viên</button><button class="b g" onclick="exportXlsx()">Xuất Excel (đã cập nhật)</button><button class="b" onclick="openPasteImport()">Nhập từ Excel</button><span id="empMsg" class="msg ${st.msg.startsWith('!')?'e':''}">${esc(st.msg.replace('!',''))}</span></div></div>
  ${chkb()}<div class="tb"><input data-k="mq" placeholder="Tìm nhân viên để cho nghỉ việc" value="${esc(st.mq)}" oninput="inp('mq',this.value)"><span class="note">${st.mq?'Tìm thấy '+a.length+' nhân viên':'Gõ tên hoặc mã NV để hiện nhân viên cần cho nghỉ việc'}</span></div>`+
  (!st.mq?'':tbl(['Mã NV','Họ tên','Ca','Loại','Line','Vendor','Ngày vào',''],a.slice(0,st.mn).map(e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[4]),esc(e[6]),esc(e[5]),fd(e[2]),`<button class="r" onclick="askResign('${e[0]}')">Nghỉ việc</button>`]),a.length>st.mn?`<div class="tb" style="margin-top:10px"><button class="b g" onclick="go('mn',st.mn+200)">Xem thêm</button></div>`:''))}
 function msg(m){st.msg=m;render()}
@@ -541,7 +544,7 @@ function addEmp(){const g=i=>$(i).value.trim(),id=g('nI'),nm=g('nN'),d=g('nD'),l
  if(!id||!nm||!d||!ln)return showError('Vui lòng điền Mã NV, Họ tên, Ngày vào và Line');
  const key=x=>String(x||'').trim().toLocaleUpperCase(),existing=D.E.concat(D.R,S.adds||[]).find(e=>key(e[0])===key(id));
  if(existing)return showError('Mã NV '+id+' đã tồn tại trong danh sách đang làm hoặc đã nghỉ việc. Hãy kiểm tra mã rồi thử lại.');
- S.adds.push([id,nm,d,g('nC'),g('nT'),g('nV'),ln,g('nP'),g('nM'),g('nG')]);save('Đã thêm '+nm+' – đã lưu vào máy chủ')}
+ S.adds.push([id,nm,d,g('nC'),g('nT'),g('nV'),ln,g('nP'),g('nM'),g('nG'),g('nW')||null]);save('Đã thêm '+nm+' – đã lưu vào máy chủ')}
 function askResign(id){const e=D.E.concat(S.adds).find(x=>x[0]===id);$('modal').innerHTML=`<div class="mo"><div><h3>Cho nghỉ việc: ${esc(e[1])} (${esc(id)})</h3><div class="f" style="grid-template-columns:1fr"><div><label>Ngày nghỉ</label><input id="rD" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div><label>Lý do</label><select id="rR"><option>Nhân viên báo nghỉ việc</option><option>Nghỉ tự do nhiều ngày</option><option>Kết thúc thực tập</option><option>Về đi học</option><option>Leader xác nhận nghỉ việc</option><option>Khác</option></select></div></div><div class="tb" style="margin-top:12px"><button class="b" onclick="doResign('${id}')">Xác nhận</button><button class="b g" onclick="$('modal').innerHTML=''">Hủy</button></div></div></div>`}
 function doResign(id){const d=$('rD').value;if(!d)return;S.res[id]=[d,$('rR').value];$('modal').innerHTML='';save('Đã lưu: nhân viên đã chuyển sang danh sách nghỉ việc')}
 function restore(id){(S.restore=S.restore||[]).push(id);save('Đã khôi phục nhân viên')}
