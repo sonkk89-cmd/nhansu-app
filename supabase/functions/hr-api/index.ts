@@ -286,8 +286,8 @@ Deno.serve(async req => {
         fetchAllLeaves("*"),
       ]);
       if (a.error || r.error) throw a.error || r.error;
-      const rowE = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.title,e.manager,e.gender];
-      const rowR = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.resign_date,e.resign_reason,1,e.title,e.manager,e.gender];
+      const rowE = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.title,e.manager,e.gender,e.work_shift||null];
+      const rowR = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.resign_date,e.resign_reason,1,e.title,e.manager,e.gender,e.work_shift||null];
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
       return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: leaveRows.map(rowL) }, 200, origin);
     }
@@ -364,7 +364,7 @@ Deno.serve(async req => {
       const { data, error } = await admin.rpc("hr_update_employee", {
         p_id:id,p_name:name,p_joined:joined,p_shift:shift,p_type:type,
         p_vendor:String(b.vendor||"").trim(),p_line:line,p_title:String(b.title||"").trim(),
-        p_manager:String(b.manager||"").trim(),p_gender:String(b.gender||"").trim(),p_username:user.username
+        p_manager:String(b.manager||"").trim(),p_gender:String(b.gender||"").trim(),p_work_shift:String(b.work_shift||"").trim(),p_username:user.username
       });
       if (error) throw error; return reply(data,200,origin);
     }
