@@ -76,7 +76,7 @@ main#app.employees-page{max-width:1500px;width:100%;padding-left:8px;padding-rig
 let D={E:[],R:[],L:[],me:{name:"",role:""}};
 const TABS=['Tổng quan','DS nhân viên','Theo line','Theo Leader','Theo loại','Nghỉ hằng ngày','Nghỉ việc','Thêm / Nghỉ việc','Quản trị','TOP nhân lực nghỉ nhiều nhất','Lịch âm dương','Chấm công'];
 const WD=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
-const CODE={P:'Phép năm (P)',"P/2":'Phép năm nửa ngày (P/2)',TD:'Nghỉ tự do (TD)',R:'Không lương (R)',RCC:'Không lương CC (RCC)',O:'Nghỉ ốm (O)',Stop:'Báo nghỉ việc',"ĐM":'Đi muộn'};
+const CODE={P:'Nghỉ Phép Năm (P)',"P/2":'1/2 phép (P/2)',RCC:'Nghỉ không lương có chuyên cần (RCC)',SO:'Shift Off (SO)',TN:'Nghỉ bị tai nạn (TN)',VS:'Nghỉ vợ sinh (VS)',R:'Nghỉ không lương (R)',TD:'Nghỉ tự do (TD)',O:'Nghỉ Ốm (O)',NC:'Nghỉ cưới (NC)',T:'Nghỉ tang (T)',"ĐM":'Đi muộn (ĐM)',Stop:'Nghỉ việc (Stop)'};
 const TYPES=['Chính thức','Thời vụ','Sinh viên'];
 const TD=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 let S={adds:[],res:{},leaves:[]},tab=0,st={sh:['A','C','HC'],lt:[],ld:'',line:'',type:'Chính thức',q:'',mode:'day',day:TD,newDay:TD,ovLine:'',ovLineQ:'',mon:TD.slice(0,7),yr:TD.slice(0,4),rq:'',rm:'',rt:'',rn:100,mq:'',mn:100,lq:'',msg:''};
@@ -578,18 +578,10 @@ async function saveResignationEdit(id){
  closeM();st.msg='Đã sửa thông tin nghỉ việc của '+id;await load();
  }catch(e){$('reError').textContent='Không kết nối được máy chủ.'}
 }
-function addLeave(){const v=$('lE').value.trim(),id=v.split(' - ')[0].trim(),e=emps().find(x=>x[0]===id),d=$('lD').value;
- if(!e||!d)return msg('!Chọn nhân viên trong danh sách và nhập ngày');
- S.leaves.push([id,e[1],e[6],e[3],e[4],$('lC').value,$('lR').value.trim(),d]);st.day=d;save('Đã ghi nhận nghỉ – đã lưu vào máy chủ')}
-function delLeave(id,d){if(confirm('Xóa lượt nghỉ này?')){(S.delL=S.delL||[]).push([id,d]);save('Đã xóa lượt nghỉ')}}
-function setEx(b,n){window._ex={rows:b.map(e=>[e[0],e[1],e[3],e[4],e[5],e[6],e[7],e[8],fd(e[2])]),name:'DS_'+nz(n).replace(/\W+/g,'_')};return ''}
-async function exList(){const x=window._ex;if(!x)return;const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Mã NV','Họ tên','Ca','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào']].concat(x.rows)),'Danh sách');const buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});XLSX.writeFile(wb,x.name+'.xlsx')}
-let IMP=null;
-const IMPN={adds:'Thêm nhân viên',res:'Báo nghỉ việc',leaves:'Báo nghỉ hằng ngày'};
-function openPasswordChange(event){
- if(event)event.preventDefault();
- $('modal').innerHTML='<div class="mo"><div style="max-width:500px;width:min(500px,92vw)"><h3>Đổi mật khẩu</h3><p class="note">Nhập mật khẩu hiện tại để xác nhận danh tính. Mật khẩu mới cần tối thiểu 8 ký tự. Sau khi đổi, trình duyệt này sẽ đăng xuất và bạn cần đăng nhập lại.</p><div class="f" style="grid-template-columns:1fr"><div><label>Mật khẩu hiện tại</label><input id="pwCurrent" type="password" autocomplete="current-password"></div><div><label>Mật khẩu mới</label><input id="pwNew" type="password" autocomplete="new-password"></div><div><label>Nhập lại mật khẩu mới</label><input id="pwConfirm" type="password" autocomplete="new-password"></div></div><div id="pwError" class="msg e"></div><div class="tb" style="margin-top:12px"><button id="pwSave" class="b" onclick="submitPasswordChange()">Đổi mật khẩu</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
-}
+function addLeave(){const v=$('lE').value.trim(),id=v.split(' - ')[0].trim(),e=emps().find(x=>x[0]===id),d=$('lD').value,code=$('lC').value;
+  if(!e||!d)return msg('!Chọn nhân viên trong danh sách và nhập ngày');
+  if(!Object.prototype.hasOwnProperty.call(CODE,code))return msg('!Loại nghỉ không hợp lệ. Vui lòng chọn lại mã nghỉ.');
+  S.leaves.push([id,e[1],e[6],e[3],e[4],code,$('lR').value.trim(),d]);st.day=d;save('Đã ghi nhận nghỉ – đã lưu vào máy chủ')}
 async function submitPasswordChange(){
  const currentPassword=$('pwCurrent')?.value||'',newPassword=$('pwNew')?.value||'',confirmPassword=$('pwConfirm')?.value||'';
  const error=$('pwError'),button=$('pwSave');
