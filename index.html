@@ -713,10 +713,10 @@ function importXlsx(el){const f=el.files[0];if(!f)return;const rd=new FileReader
  const j=await r.json();if(!r.ok){msg('!'+(j.error||'Lỗi kiểm tra file'));return}
  showPreview(j)}catch(err){msg('!Không đọc được file Excel')}};rd.readAsArrayBuffer(f);el.value=''}
 function showPreview(j){const K=['adds','res','leaves'],okN=K.reduce((s,k)=>s+j[k].ok,0),errN=K.reduce((s,k)=>s+j[k].errors.length,0),wN=K.reduce((s,k)=>s+j[k].warnings.length,0);
- const er=K.flatMap(k=>j[k].errors.map(e=>[IMPN[k],e.row,esc(e.msg)])),wr=K.flatMap(k=>j[k].warnings.map(e=>[IMPN[k],e.row,esc(e.msg)]));
+ const er=K.flatMap(k=>j[k].errors.map(e=>[PASTE_SHEETS[k].label,e.row,esc(e.msg)])),wr=K.flatMap(k=>j[k].warnings.map(e=>[PASTE_SHEETS[k].label,e.row,esc(e.msg)]));
  $('modal').innerHTML=`<div class="mo"><div style="max-width:780px;max-height:88vh;overflow:auto"><h3>Kiểm tra trước khi nhập: ${esc(IMP.file)}</h3>
  <div class="note" style="margin:0 0 8px">Chưa có gì được ghi vào hệ thống cho đến khi bạn bấm “Xác nhận nhập”.${IMP.filteredDuplicates?` Có ${IMP.filteredDuplicates} dòng trùng ID đã bị loại khỏi lần nhập.`:''}</div>`+
- tbl(['Sheet','Dòng đọc được','Hợp lệ','Lỗi (bị bỏ qua)','Cảnh báo','Đã có / ví dụ (bỏ qua)'],K.map(k=>[IMPN[k],j[k].total,`<b style="color:var(--ok)">${j[k].ok}</b>`,j[k].errors.length?`<b style="color:var(--er)">${j[k].errors.length}</b>`:0,j[k].warnings.length?`<b style="color:var(--wr)">${j[k].warnings.length}</b>`:0,j[k].skipped]))+
+ tbl(['Sheet','Dòng đọc được','Hợp lệ','Lỗi (bị bỏ qua)','Cảnh báo','Đã có / ví dụ (bỏ qua)'],K.map(k=>[PASTE_SHEETS[k].label,j[k].total,`<b style="color:var(--ok)">${j[k].ok}</b>`,j[k].errors.length?`<b style="color:var(--er)">${j[k].errors.length}</b>`:0,j[k].warnings.length?`<b style="color:var(--wr)">${j[k].warnings.length}</b>`:0,j[k].skipped]))+
  (errN?`<h3 style="margin:12px 0 6px;color:var(--er)">Dòng lỗi – sẽ KHÔNG được nhập (sửa dữ liệu rồi nhập lại)</h3>`+tbl(['Sheet','Dòng nguồn','Lý do'],er.slice(0,100))+(er.length>100?`<div class="note">Chỉ hiện 100 lỗi đầu trong ${er.length}.</div>`:''):'')+
  (wN?`<h3 style="margin:12px 0 6px;color:var(--wr)">Cảnh báo – vẫn được nhập, bạn nên kiểm tra lại</h3>`+tbl(['Sheet','Dòng Excel','Nội dung'],wr.slice(0,60))+(wr.length>60?`<div class="note">Chỉ hiện 60 cảnh báo đầu trong ${wr.length}.</div>`:''):'')+
  `<p style="margin:12px 0 4px"><b>${okN}</b> dòng hợp lệ sẽ được nhập${errN?`, <b style="color:var(--er)">${errN}</b> dòng lỗi bị bỏ qua`:''}.</p>
