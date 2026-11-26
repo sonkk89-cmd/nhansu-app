@@ -552,7 +552,18 @@ function editLeave(id,date,code,reason){
  if(!['admin','editor'].includes(D.me.role))return;
  $('modal').innerHTML=`<div class="mo"><div><h3>Sửa lượt nghỉ hằng ngày</h3><p class="note">Nhân viên: <b>${esc(id)}</b></p>
  <div class="f"><div><label>Ngày nghỉ *</label><input id="leDate" type="date" value="${esc(date)}"></div><div><label>Loại nghỉ *</label><select id="leCode">${Object.entries(CODE).map(([k,v])=>`<option value="${esc(k)}" ${k===code?'selected':''}>${esc(v)}</option>`).join('')}</select></div><div><label>Lý do</label><input id="leReason" value="${esc(reason)}"></div></div><div id="leError" class="msg e"></div>
- <div class="tb" style="margin-top:10px"><button class="b" onclick="saveLeaveEdit('${esc(id)}','${esc(date)}')">Lưu thay đổi</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
+ <div class="tb" style="margin-top:10px"><button class="b" onclick="saveLeaveEdit('${esc(id)}','${esc(date)}')">Lưu thay đổi</button><button class="b r" onclick="cancelDailyLeave('${esc(id)}','${esc(date)}')">Không nghỉ</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>`;
+}
+async function cancelDailyLeave(id,date){
+  if(!confirm('Xác nhận: '+id+' không nghỉ ngày '+fd(date)+'? Lượt nghỉ này sẽ được hủy khỏi danh sách nghỉ hằng ngày.'))return;
+  const buttons=document.querySelectorAll('#modal button');buttons.forEach(b=>b.disabled=true);
+  try{
+   const r=await HRCloud.api('/api/leaves/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,date})});
+   if(r.status===401){location=window.HR_CONFIG.basePath+'login.html';return}
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw new Error(j.error||'Không thể hủy lượt nghỉ.');
+   closeM();st.msg='Đã chuyển '+id+' thành Không nghỉ ngày '+fd(date);await load();
+  }catch(e){const el=$('leError');if(el)el.textContent=String(e?.message||e);buttons.forEach(b=>b.disabled=false)}
 }
 async function saveLeaveEdit(id,oldDate){
  const date=$('leDate').value,code=$('leCode').value,reason=$('leReason').value.trim();
