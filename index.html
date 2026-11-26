@@ -250,12 +250,25 @@ function vOverviewLineDetail(){
  const gone=resigned().filter(e=>e[6]===st.ovLine&&e[7]===st.day&&sf(e[3])&&wf(e));
  return `<div class="card" style="margin-top:8px"><div class="tb" style="justify-content:space-between"><div><h3>Danh sách nhân viên theo line: ${esc(st.ovLine)}</h3><div class="note">Đang làm việc: ${rows.length}/${all.length} người theo các ca đang chọn.</div></div><button class="b g" onclick="closeOverviewLine()">Đóng danh sách</button></div><div class="tb"><input data-k="ovLineQ" placeholder="Tìm mã NV, họ tên, quản lý..." value="${esc(st.ovLineQ||'')}" oninput="inp('ovLineQ',this.value)" style="min-width:240px"></div>${tbl(eH,rows.map(eRow))}${gone.length?`<div style="margin-top:12px"><h3>Nhân viên nghỉ việc trong ngày ${fd(st.day)} trên line này: ${gone.length}</h3>`+tbl(['Mã NV','Họ tên','Ngày vào','Ca','Loại','Ngày nghỉ','Lý do'],gone.map(e=>[esc(e[0]),esc(e[1]),fd(e[2]),esc(e[3]),esc(e[4]),fd(e[7]),esc(e[8])||'<span class="note">(chưa ghi lý do)</span>']))+`</div>`:''}</div>`
 }
+let _lineLeaderExport={rows:[],label:''};
+function setEx(rows,label){
+ _lineLeaderExport={rows:Array.isArray(rows)?rows.slice():[],label:String(label||'Danh_sach')};
+ return '';
+}
+function exList(){
+ const rows=_lineLeaderExport.rows||[];
+ const safe=String(_lineLeaderExport.label||'Danh_sach').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'Danh_sach';
+ const data=[eH,...rows.map(e=>[e[0],e[1],e[3],e[10]||'Chưa phân ca',e[4],e[5],e[6],e[7],e[8],fd(e[2])])];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Danh sach');
+ XLSX.writeFile(wb,'Nhan_luc_'+safe+'.xlsx');
+}
 function vLine(){const a=emps(),ls=Object.keys(cnt(a,e=>e[6])).sort();if(!st.line)st.line=ls[0];
  const b=a.filter(e=>e[6]===st.line&&sf(e[3])&&(!st.q||nz(e.join(' ')).includes(nz(st.q))));const al=a.filter(e=>e[6]===st.line&&sf(e[3]));
  return chkb()+`${setEx(b,st.line)}<div class="tb"><select onchange="go('line',this.value)">${ls.map(l=>`<option ${l===st.line?'selected':''}>${esc(l)}</option>`).join('')}</select><button class="b" onclick="exList()">Xuất Excel</button><input data-k="q" placeholder="Tìm tên / mã NV" value="${esc(st.q)}" oninput="inp('q',this.value)"></div>`+shiftKpi(al)+
  `<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo loại nhân lực</h3>${bars(cnt(al,e=>e[4]),al.length)}</div><div class="card"><h3>Theo vendor</h3>${bars(cnt(al,e=>e[5]),al.length)}</div></div>`+
  tbl(eH,b.map(eRow))+`<p class="note">Hiển thị ${b.length}/${al.length} người trên ${esc(st.line)}.</p>`}
-function vLeader(){const lk=e=>e[8]||'(trống)',a=emps(),ls=Object.entries(cnt(a,lk)).sort((x,y)=>x[0].localeCompare(y[0],'vi'));if(!ls.some(x=>x[0]===st.ld))st.ld=ls[0][0];
+function vLeader(){const lk=e=>e[8]||'(trống)',a=emps(),ls=Object.entries(cnt(a,lk)).sort((x,y)=>x[0].localeCompare(y[0],'vi'));if(!ls.some(x=>x[0]===st.ld))st.ld=ls[0]?.[0]||'';
  const al=a.filter(e=>lk(e)===st.ld&&sf(e[3])),b=al.filter(e=>!st.q||nz(e.join(' ')).includes(nz(st.q)));
  return chkb()+`${setEx(b,st.ld)}<div class="tb"><select onchange="go('ld',this.value)">${ls.map(([k,v])=>`<option value="${esc(k)}" ${k===st.ld?'selected':''}>${esc(k)} (${v})</option>`).join('')}</select><button class="b" onclick="exList()">Xuất Excel</button><input data-k="q" placeholder="Tìm tên / mã NV" value="${esc(st.q)}" oninput="inp('q',this.value)"></div>`+shiftKpi(al)+
  `<div class="cols" style="margin-bottom:12px"><div class="card"><h3>Theo loại nhân lực</h3>${bars(cnt(al,e=>e[4]),al.length)}</div><div class="card"><h3>Theo line</h3>${bars(cnt(al,e=>e[6]),al.length)}</div><div class="card"><h3>Theo vendor</h3>${bars(cnt(al,e=>e[5]),al.length)}</div></div>`+
