@@ -81,6 +81,21 @@ const TYPES=['Chính thức','Thời vụ','Sinh viên'];
 const TD=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 let S={adds:[],res:{},leaves:[]},tab=0,st={sh:['A','C','HC'],lt:[],ld:'',line:'',type:'Chính thức',q:'',mode:'day',day:TD,newDay:TD,ovLine:'',ovLineQ:'',mon:TD.slice(0,7),yr:TD.slice(0,4),rq:'',rm:'',rt:'',rn:100,mq:'',mn:100,lq:'',msg:''};
 let db=null,docRef=null;
+let identityCards=[],identityCardsLoaded=false,identitySyncBusy=false;
+async function loadIdentityCards(){
+ if(!['admin','editor'].includes(D.me.role))return;
+ try{const r=await HRCloud.api('/api/erp/identity-cards');const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Không tải được CCCD');identityCards=Array.isArray(j.rows)?j.rows:[];identityCardsLoaded=true;st.identityError='';render();}
+ catch(e){identityCardsLoaded=false;st.identityError=String(e?.message||e);render();}
+}
+async function syncIdentityCards(){
+ if(D.me.role!=='admin'||identitySyncBusy)return;
+ if(!confirm('Đồng bộ CCCD từ ERP về hệ thống nhân sự? Chỉ đọc dữ liệu ERP, không chỉnh sửa ERP hoặc hồ sơ nhân viên.'))return;
+ identitySyncBusy=true;st.identitySyncMessage='Đang kết nối ERP và đồng bộ...';render();
+ try{const r=await HRCloud.api('/api/erp/identity-cards/sync',{method:'POST'});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Đồng bộ thất bại');
+  const list=await HRCloud.api('/api/erp/identity-cards');const lj=await list.json().catch(()=>({}));if(!list.ok)throw new Error(lj.error||'Đã đồng bộ nhưng không đọc lại được CCCD');
+  identityCards=Array.isArray(lj.rows)?lj.rows:[];identityCardsLoaded=true;st.identitySyncMessage='Đã đồng bộ '+(j.saved||0)+'/'+(j.erpTotal||0)+' hồ sơ. Thiếu CCCD: '+(j.missingIdentityCard||0)+'.';st.identityError='';
+ }catch(e){st.identitySyncMessage='';st.identityError=String(e?.message||e)}finally{identitySyncBusy=false;render()}
+}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fd=d=>d?d.split('-').reverse().join('/'):'';
@@ -111,7 +126,7 @@ function tbl(h,rows,more){return `<div class="tw"><table><tr>${h.map(x=>`<th>${x
 function shiftKpi(a){const c=cnt(a,e=>e[3]),gs=r=>{const g=cnt(r,e=>{const n=nz(e[9]);return n==='nam'?'Nam':n==='nu'?'Nữ':'Khác'});return `Nam ${g.Nam||0} · Nữ ${g['Nữ']||0}${g['Khác']?' · Chưa rõ '+g['Khác']:''}`},s=k=>gs(a.filter(e=>e[3]===k));return kpi([['Tổng nhân lực',a.length,gs(a)],['Ca A',c.A||0,s('A')],['Ca C',c.C||0,s('C')],['Hành chính (HC)',c.HC||0,s('HC')]])}
 const eRow=e=>[esc(e[0]),esc(e[1]),esc(e[3]),esc(e[10]||'Chưa phân ca'),esc(e[4]),esc(e[5]),esc(e[6]),esc(e[7]),esc(e[8]),fd(e[2])];
 const eH=['Mã NV','Họ tên','Ca','Ca làm việc','Loại','Vendor','Line','Chức vụ','Quản lý','Ngày vào'];
-function setTab(i){if(i===11&&D.me.role==='viewer')return;tab=i;st.msg='';render();if(i===8)loadAdmin();if((i===1||i===11)&&['admin','editor'].includes(D.me.role)&&(!st.checkins||st.checkins.date!==(st.ckDate||TD)))loadCheckin(st.ckDate||TD)}
+function setTab(i){if(i===11&&D.me.role==='viewer')return;tab=i;st.msg='';render();if(i===8)loadAdmin();if(i===1&&['admin','editor'].includes(D.me.role)&&!identityCardsLoaded)loadIdentityCards();if((i===1||i===11)&&['admin','editor'].includes(D.me.role)&&(!st.checkins||st.checkins.date!==(st.ckDate||TD)))loadCheckin(st.ckDate||TD)}
 function go(k,v){st[k]=v;render()}
 function inp(k,v){st[k]=v;const p=document.activeElement.selectionStart;render();const el=document.querySelector('[data-k="'+k+'"]');if(el){el.focus();try{el.setSelectionRange(p,p)}catch(e){}}}
 
@@ -431,13 +446,15 @@ function vEmployees(){
  const all=emps().filter(e=>sf(e[3])).sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'vi'));
  const canEdit=['admin','editor'].includes(D.me.role),checkins=st.checkins?.date===(st.ckDate||TD)?st.checkins:null;
  const deptById=new Map((checkins?.rows||[]).map(r=>[String(r.emp_id||'').trim(),String(r.department||'').trim()]));
+ const identityById=new Map(identityCards.map(x=>[String(x.employee_code),String(x.identity_card||'')]));
  const q=nz(st.eq||''),a=q?all.filter(e=>nz([...e,deptById.get(String(e[0]))||''].join(' ')).includes(q)):all;
  const deptStatus=!canEdit?'<span class="note">Line Điểm Danh chỉ tải được với quyền nhập liệu hoặc quản trị.</span>':st.ckLoading?'<span class="note">Đang tải Line Điểm Danh trực tiếp...</span>':checkins?'<span class="note">Line Điểm Danh lấy trực tiếp cho ngày '+fd(checkins.date||st.ckDate||TD)+' · không lưu vào Supabase.</span>':'<span class="note">'+(st.ckError?esc(st.ckError)+' · ':'')+'Chưa tải được dữ liệu Line Điểm Danh.</span> <button class="b g" onclick="loadCheckin(st.ckDate||TD)">Tải lại</button>';
  const cell=v=>{const s=String(v??'');return '<span title="'+esc(s)+'">'+esc(s||'')+'</span>'};
- return chkb()+`<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="${esc(st.eq||'')}" oninput="inp('eq',this.value)" style="min-width:260px"><span class="note">Đang hiển thị ${a.length}/${all.length} nhân viên · ${canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem'}</span>${canEdit?'<button class="b g" onclick="openBulkFieldModal()">Đổi hàng loạt Line / Vendor / Quản lý</button>':''}${D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':''}</div><div class="tb" style="margin:6px 0 0">${deptStatus}</div>${D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':''}</div>`+
- tbl(['Mã NV','Họ tên','Ngày vào','Ca','Ca làm việc','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác']:[])],a.map(e=>[cell(e[0]),cell(e[1]),cell(fd(e[2])),cell(e[3]),cell(e[10]||'Chưa phân ca'),cell(e[4]),cell(e[5]),cell(e[6]),cell(deptById.get(String(e[0]))||'—'),cell(e[7]),cell(e[8]),cell(e[9]),...(canEdit?[`<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee(${esc(JSON.stringify(e[0]))})">Sửa</button>${D.me.role==='admin'? ` <button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee(${esc(JSON.stringify(e[0]))})">Xóa</button>`:''}`]:[])]));
+ const tools=canEdit?'<div class="card"><div class="tb" style="justify-content:space-between"><div><b>Đối chiếu CCCD từ ERP</b><div class="note">'+(identityCardsLoaded?'Đã tải '+identityCards.length+' hồ sơ CCCD.':esc(st.identityError||'Chưa tải dữ liệu CCCD.'))+'</div></div>'+(D.me.role==='admin'?'<button class="b" onclick="syncIdentityCards()" '+(identitySyncBusy?'disabled':'')+'>'+(identitySyncBusy?'Đang đồng bộ...':'Đồng bộ CCCD từ ERP')+'</button>':'')+'</div>'+(st.identitySyncMessage?'<p class="msg">'+esc(st.identitySyncMessage)+'</p>':'')+'</div>':'';
+ const head=['Mã NV','Họ tên','Ngày vào','Ca','Ca làm việc','Loại nhân lực','Vendor','Line','Line Điểm Danh','Chức vụ','Quản lý','Giới tính',...(canEdit?['Thao tác','CCCD']:[])];
+ const rows=a.map(e=>[cell(e[0]),cell(e[1]),cell(fd(e[2])),cell(e[3]),cell(e[10]||'Chưa phân ca'),cell(e[4]),cell(e[5]),cell(e[6]),cell(deptById.get(String(e[0]))||'—'),cell(e[7]),cell(e[8]),cell(e[9]),...(canEdit?[ '<button class="b g" style="padding:4px 9px;font-size:12px" onclick="editEmployee('+esc(JSON.stringify(e[0]))+')">Sửa</button>'+(D.me.role==='admin'?'<button class="r" style="padding:4px 9px;font-size:12px" onclick="deleteEmployee('+esc(JSON.stringify(e[0]))+')">Xóa</button>':''),cell(identityById.get(String(e[0]))||'—')]:[])]);
+ return chkb()+'<div class="card"><h3>Danh sách toàn bộ nhân viên đang làm việc</h3><div class="tb"><input data-k="eq" placeholder="Tìm mã NV, họ tên, line, quản lý..." value="'+esc(st.eq||'')+'" oninput="inp(\'eq\',this.value)" style="min-width:260px"><span class="note">Đang hiển thị '+a.length+'/'+all.length+' nhân viên · '+(canEdit?'Vai trò của bạn được phép sửa':'Chỉ xem')+'</span>'+(canEdit?'<button class="b g" onclick="openBulkFieldModal()">Đổi hàng loạt Line / Vendor / Quản lý</button>':'')+(D.me.role==='admin'?'<button class="r" onclick="openDeleteAllEmployees()">Xóa toàn bộ nhân viên</button>':'')+'</div><div class="tb" style="margin:6px 0 0">'+deptStatus+'</div>'+(D.me.role==='admin'?'<p class="note" style="margin:8px 0 0">Xóa toàn bộ gồm cả nhân viên đã nghỉ và lượt nghỉ liên quan; tài khoản, nhật ký và lịch sử nhập Excel được giữ lại.</p>':'')+'</div>'+tools+tbl(head,rows);
 }
-
 function bulkFieldInfo(key){
  return {line:{label:'Line',index:6},vendor:{label:'Vendor',index:5},manager:{label:'Quản lý',index:8}}[key]||null;
 }
