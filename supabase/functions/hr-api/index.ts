@@ -291,6 +291,15 @@ Deno.serve(async req => {
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
       return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: leaveRows.map(rowL) }, 200, origin);
     }
+    if (method === "POST" && route === "/api/leaves/cancel") {
+      requireRole(user, ["admin", "editor"]); const b = await req.json();
+      const id=String(b.id||"").trim(), date=dateValue(b.date);
+      if(!id||!date) return fail("Mã nhân viên hoặc ngày nghỉ không hợp lệ",400,origin);
+      const {data,error}=await admin.from("leaves").delete().eq("emp_id",id).eq("date",date).select("emp_id").maybeSingle();
+      if(error)throw error; if(!data)return fail("Không tìm thấy lượt nghỉ cần hủy",404,origin);
+      await audit(user.username,"leave_cancel",`${id}: hủy lượt nghỉ ngày ${date} (chuyển thành Không nghỉ)`);
+      return reply({ok:true},200,origin);
+    }
     if (method === "POST" && route === "/api/leaves/update") {
       requireRole(user, ["admin", "editor"]); const b = await req.json();
       const id=String(b.id||"").trim(), oldDate=dateValue(b.oldDate), date=dateValue(b.date);
