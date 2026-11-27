@@ -469,18 +469,21 @@ Deno.serve(async req => {
       if (String(b.confirmation || "").trim() !== "XÂY LẠI DỮ LIỆU") {
         return fail('Gõ đúng “XÂY LẠI DỮ LIỆU” để xác nhận', 400, origin);
       }
-      const [employeeCount, leaveCount] = await Promise.all([
+      const [employeeCount, leaveCount, maternityCount] = await Promise.all([
         countRows("employees"),
         countRows("leaves"),
+        countRows("maternity_leaves"),
       ]);
+      const { error: maternityError } = await admin.from("maternity_leaves").delete().gte("id", 0);
+      if (maternityError) throw maternityError;
       const { error: leaveError } = await admin.from("leaves").delete().gte("id", 0);
       if (leaveError) throw leaveError;
       const { error: employeeError } = await admin.from("employees").delete().neq("id", "");
       if (employeeError) throw employeeError;
       const { error: importError } = await admin.from("imports").delete().gte("id", 0);
       if (importError) throw importError;
-      await audit(user.username, "system_reset", `Xây lại dữ liệu: đã xóa ${employeeCount} nhân viên và ${leaveCount} lượt nghỉ`);
-      return reply({ ok: true, removed: { employees: employeeCount, leaves: leaveCount } }, 200, origin);
+      await audit(user.username, "system_reset", `Xây lại dữ liệu: đã xóa ${employeeCount} nhân viên, ${leaveCount} lượt nghỉ và ${maternityCount} hồ sơ nghỉ sinh`);
+      return reply({ ok: true, removed: { employees: employeeCount, leaves: leaveCount, maternity: maternityCount } }, 200, origin);
     }
     if (route === "/api/users" && method === "GET") {
       requireRole(user, ["admin"]); const { data, error } = await admin.from("hr_users").select("username,name,role").order("username");
