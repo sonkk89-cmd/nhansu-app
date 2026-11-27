@@ -578,7 +578,7 @@ async function saveEmployeeEdit(id){
   closeM();st.msg='Đã sửa thông tin nhân viên '+id;await load();
  }catch(e){$('eeError').textContent='Không kết nối được máy chủ.'}
 }
-function maternityDuration(order,children,living,birthDate){return (Number(order)===2&&living&&String(birthDate||'')>='2026-07-01'?7:6)+Math.max(0,Number(children)-1)}
+function maternityDuration(order,children,birthDate){return (Number(order)===2&&String(birthDate||'')>='2026-07-01'?7:6)+Math.max(0,Number(children)-1)}
 function addMonthsISO(date,months){
  const [y,m,d]=String(date).split('-').map(Number),total=y*12+(m-1)+Number(months),yy=Math.floor(total/12),mm=total%12+1;
  const last=new Date(Date.UTC(yy,mm,0)).getUTCDate();
@@ -598,8 +598,8 @@ function maternityTableHtml(){
  return '<div class="card"><h3>Danh sách nghỉ sinh</h3><p class="note">Ngày quay lại được tự tính; nhân viên tự trở lại danh sách khi đến hạn.</p>'+tbl(['Mã NV','Họ tên','Ngày bắt đầu','Ngày sinh con','Thứ tự sinh','Số con','Thời gian nghỉ','Ngày quay lại','Tình trạng'],rows)+'</div>';
 }
 function previewMaternity(){
- const start=$('matStart')?.value||'',birth=$('matBirth')?.value||'',order=Number($('matOrder')?.value||1),children=Number($('matChildren')?.value||1),living=$('matLiving')?.value==='yes';
- const months=maternityDuration(order,children,living,birth),ret=start?addMonthsISO(start,months):'';
+ const start=$('matStart')?.value||'',birth=$('matBirth')?.value||'',order=Number($('matOrder')?.value||1),children=Number($('matChildren')?.value||1);
+ const months=maternityDuration(order,children,birth),ret=start?addMonthsISO(start,months):'';
  const el=$('matPreview');if(el)el.innerHTML=start&&birth?'Thời gian nghỉ dự kiến: <b>'+months+' tháng</b> · Ngày quay lại: <b>'+fd(ret)+'</b>':'Chọn ngày sinh con và ngày bắt đầu nghỉ để tính ngày quay lại';
 }
 function askMaternity(id){
@@ -608,18 +608,18 @@ function askMaternity(id){
  $('modal').innerHTML='<div class="mo"><div style="max-width:620px;width:min(620px,92vw);max-height:90vh;overflow:auto"><h3>Ghi nhận nghỉ sinh: '+esc(e[1])+' ('+esc(id)+')</h3><p class="note">Điền đủ 3 điều kiện để hệ thống xác định thời gian nghỉ theo chế độ thai sản.</p><div class="f" style="grid-template-columns:1fr">'+
  '<div><label>1. Sinh con thứ mấy?</label><select id="matOrder" onchange="previewMaternity()"><option value="1">Con thứ nhất</option><option value="2">Con thứ hai</option><option value="3">Con thứ ba trở lên</option></select></div>'+
  '<div><label>2. Số con trong lần sinh này?</label><select id="matChildren" onchange="previewMaternity()">'+opts+'</select></div>'+
- '<div><label>3. Tại thời điểm sinh, người mẹ có một con đẻ còn sống không?</label><select id="matLiving" onchange="previewMaternity()"><option value="yes">Có</option><option value="no">Không</option></select></div>'+
+ 
  '<div><label>Ngày sinh con *</label><input id="matBirth" type="date" value="'+TD+'" onchange="previewMaternity()"></div>'+
  '<div><label>Ngày bắt đầu nghỉ sinh *</label><input id="matStart" type="date" value="'+TD+'" onchange="previewMaternity()"></div></div>'+
  '<div id="matPreview" class="msg" style="margin-top:12px"></div><p class="note">Từ 01/07/2026: 6 tháng cơ bản; 7 tháng nếu sinh con thứ hai và tại thời điểm sinh có một con đẻ còn sống; sinh đôi trở lên cộng 1 tháng cho mỗi con tăng thêm. Ngày bắt đầu nghỉ trước sinh không được sớm quá 2 tháng. Ngày quay lại bằng ngày bắt đầu cộng số tháng nghỉ.</p><div id="matError" class="msg e"></div><div class="tb" style="margin-top:12px"><button class="b" onclick="doMaternity('+JSON.stringify(String(id))+')">Xác nhận nghỉ sinh</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
  previewMaternity();
 }
 async function doMaternity(id){
- const start=$('matStart')?.value,birth=$('matBirth')?.value,order=Number($('matOrder')?.value),children=Number($('matChildren')?.value),living=$('matLiving')?.value==='yes';
+ const start=$('matStart')?.value,birth=$('matBirth')?.value,order=Number($('matOrder')?.value),children=Number($('matChildren')?.value);
  if(!start||!birth){$('matError').textContent='Vui lòng chọn ngày sinh con và ngày bắt đầu nghỉ sinh.';return}
  const button=document.querySelector('#modal .b');if(button){button.disabled=true;button.textContent='Đang lưu...'}
  try{
-  const r=await HRCloud.api('/api/maternity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emp_id:id,start_date:start,birth_date:birth,birth_order:order,child_count:children,has_living_child:living})});
+  const r=await HRCloud.api('/api/maternity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emp_id:id,start_date:start,birth_date:birth,birth_order:order,child_count:children,has_living_child:order===2})});
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Không lưu được hồ sơ nghỉ sinh');
   closeM();st.matq='';st.msg='Đã ghi nhận nghỉ sinh cho '+j.emp_name+'. Ngày quay lại dự kiến: '+fd(j.return_date)+'.';await load();
  }catch(e){const er=$('matError');if(er)er.textContent=String(e?.message||e);if(button){button.disabled=false;button.textContent='Xác nhận nghỉ sinh'}}
