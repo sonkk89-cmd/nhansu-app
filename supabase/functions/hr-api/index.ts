@@ -284,10 +284,11 @@ Deno.serve(async req => {
       const b = await req.json().catch(() => ({}));
       const empId = String(b.emp_id || "").trim();
       const startDate = dateValue(b.start_date);
+      const birthDate = dateValue(b.birth_date);
       const birthOrder = Number(b.birth_order);
       const childCount = Number(b.child_count);
       const hasLivingChild = b.has_living_child === true;
-      if (!empId || !startDate) return fail("Chọn nhân viên và ngày bắt đầu nghỉ sinh hợp lệ", 400, origin);
+      if (!empId || !startDate || !birthDate) return fail("Chọn nhân viên, ngày sinh con và ngày bắt đầu nghỉ sinh hợp lệ", 400, origin);
       if (![1, 2, 3].includes(birthOrder)) return fail("Thứ tự sinh không hợp lệ", 400, origin);
       if (!Number.isInteger(childCount) || childCount < 1 || childCount > 10) return fail("Số con trong lần sinh phải từ 1 đến 10", 400, origin);
       const { data: employee, error: employeeError } = await admin.from("employees")
@@ -295,7 +296,14 @@ Deno.serve(async req => {
       if (employeeError) throw employeeError;
       if (!employee || employee.status !== "active") return fail("Nhân viên không còn trong danh sách đang làm việc", 404, origin);
       if (norm(employee.gender) && norm(employee.gender) !== "nu") return fail("Chỉ ghi nhận nghỉ sinh cho nhân viên nữ", 400, origin);
-      const durationMonths = (birthOrder === 2 && hasLivingChild ? 7 : 6) + childCount - 1;
+      const birth = new Date(birthDate + "T00:00:00Z");
+      const earliestMonth = birth.getUTCMonth() - 2;
+      const earliestYear = birth.getUTCFullYear() + Math.floor(earliestMonth / 12);
+      const earliestIndex = ((earliestMonth % 12) + 12) % 12;
+      const earliestDay = Math.min(birth.getUTCDate(), new Date(Date.UTC(earliestYear, earliestIndex + 1, 0)).getUTCDate());
+      const earliestStart = new Date(Date.UTC(earliestYear, earliestIndex, earliestDay)).toISOString().slice(0, 10);
+      if (startDate < earliestStart) return fail("Ngày bắt đầu nghỉ trước ngày sinh không được sớm quá 2 tháng", 400, origin);
+      const durationMonths = (birthOrder === 2 && hasLivingChild && birthDate >= "2026-07-01" ? 7 : 6) + childCount - 1;
       const start = new Date(startDate + "T00:00:00Z");
       const targetMonth = start.getUTCMonth() + durationMonths;
       const targetYear = start.getUTCFullYear() + Math.floor(targetMonth / 12);
@@ -311,7 +319,7 @@ Deno.serve(async req => {
         if (error) throw error;
       }
       const { data, error } = await admin.from("maternity_leaves").insert({
-        emp_id: empId, emp_name: employee.name || "", start_date: startDate,
+        emp_id: empId, emp_name: employee.name || "", start_date: startDate, birth_date: birthDate,
         birth_order: birthOrder, child_count: childCount, has_living_child: hasLivingChild,
         duration_months: durationMonths, return_date: returnDate, status: "active",
         created_by: user.username
