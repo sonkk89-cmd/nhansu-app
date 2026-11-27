@@ -275,7 +275,7 @@ Deno.serve(async req => {
       requireRole(user, ["admin"]);
       const authorization = (Deno.env.get("ERP_API_AUTHORIZATION") || "").trim();
       if (!authorization) return fail("Chưa cấu hình ERP_API_AUTHORIZATION trên Edge Function hr-api", 503, origin);
-      const authHeader = /^Bearer\\s/i.test(authorization) ? authorization : `Bearer ${authorization}`;
+      const authHeader = /^Bearer\s/i.test(authorization) ? authorization : `Bearer ${authorization}`;
       const pageSize = 100;
       const allRows: any[] = [];
       let totalRows = 0;
