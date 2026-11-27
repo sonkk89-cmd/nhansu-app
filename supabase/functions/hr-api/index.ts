@@ -263,6 +263,92 @@ Deno.serve(async req => {
       catch { warning = (warning ? warning + " " : "") + "Chưa ghi được nhật ký thao tác."; }
       return reply({ ok: true, warning }, 200, origin);
     }
+    if (route === "/api/erp/identity-cards" && method === "GET") {
+      requireRole(user, ["admin", "editor"]);
+      const { data, error } = await admin.schema("private").from("employee_identity_cards")
+        .select("employee_code,identity_card,erp_updated_at,synced_at")
+        .order("employee_code", { ascending: true });
+      if (error) throw error;
+      return reply({ rows: data || [] }, 200, origin);
+    }
+    if (route === "/api/erp/identity-cards/sync" && method === "POST") {
+      requireRole(user, ["admin"]);
+      const authorization = (Deno.env.get("ERP_API_AUTHORIZATION") || "").trim();
+      if (!authorization) return fail("Chưa cấu hình ERP_API_AUTHORIZATION trên Edge Function hr-api", 503, origin);
+      const authHeader = /^Bearer\\s/i.test(authorization) ? authorization : `Bearer ${authorization}`;
+      const pageSize = 100;
+      const allRows: any[] = [];
+      let totalRows = 0;
+      for (let page = 0; page < 100; page++) {
+        const payload = {
+          ExecuteUrl: "EXECUTETABLE/STOREDNAME/SQLPARAMS",
+          filterString: "",
+          sql: "",
+          sqlParams: {
+            Action: "Select",
+            AreaCode: "BNI",
+            Status: "AL",
+            DepartmentID: "0",
+            Vendor: "-1",
+            Page: String(page),
+            PageSize: String(pageSize),
+            searchValue: ""
+          },
+          storedName: "[dbo].[HR_spEmployees]",
+          strConnection: ""
+        };
+        let response: Response;
+        try {
+          response = await fetch("https://api.il-sungtech.com/SqlProvider", {
+            method: "POST",
+            headers: {
+              "Authorization": authHeader,
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(30000)
+          });
+        } catch {
+          throw Object.assign(new Error("Không kết nối được API ERP SqlProvider"), { status: 502 });
+        }
+        if (!response.ok) {
+          const detail = (await response.text().catch(() => "")).slice(0, 500);
+          throw Object.assign(new Error(`ERP SqlProvider trả về HTTP ${response.status}${detail ? ": " + detail : ""}`), { status: 502 });
+        }
+        const result: any = await response.json();
+        if (result?.success !== true) {
+          throw Object.assign(new Error(String(result?.message || "ERP không trả dữ liệu thành công")), { status: 502 });
+        }
+        const rows = Array.isArray(result.data) ? result.data : Array.isArray(result.Data) ? result.Data : [];
+        if (!page) totalRows = Number(result.totalRows || result.rowAffected || rows.length);
+        allRows.push(...rows);
+        if (!rows.length || allRows.length >= totalRows || rows.length < pageSize) break;
+      }
+      if (!allRows.length && totalRows > 0) throw Object.assign(new Error("ERP báo có dữ liệu nhưng không trả danh sách nhân viên"), { status: 502 });
+      const mapped = allRows.map((row: any) => ({
+        employee_code: String(row.EmployeeCode ?? "").trim(),
+        identity_card: String(row.IdentityCard ?? "").trim(),
+        erp_updated_at: row.UpdatedAt || row.ModifiedDate || null,
+        synced_at: new Date().toISOString()
+      })).filter((row: any) => row.employee_code && row.identity_card);
+      const unique = new Map<string, any>();
+      for (const row of mapped) unique.set(row.employee_code, row);
+      const records = [...unique.values()];
+      if (records.length) {
+        const { error } = await admin.schema("private").from("employee_identity_cards")
+          .upsert(records, { onConflict: "employee_code" });
+        if (error) throw error;
+      }
+      await audit(user.username, "erp_identity_cards_sync", `Đồng bộ CCCD ERP: nhận ${allRows.length}/${totalRows} nhân viên, lưu ${records.length}, thiếu CCCD ${allRows.length - mapped.length}`);
+      return reply({
+        ok: true,
+        saved: records.length,
+        erpTotal: totalRows || allRows.length,
+        received: allRows.length,
+        missingIdentityCard: allRows.length - mapped.length
+      }, 200, origin);
+    }
     if (method === "GET" && route === "/api/database-usage") {
       requireRole(user, ["admin"]);
       const { data, error } = await admin.rpc("hr_database_usage");
