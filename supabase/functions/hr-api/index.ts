@@ -287,7 +287,7 @@ Deno.serve(async req => {
       const birthDate = dateValue(b.birth_date);
       const birthOrder = Number(b.birth_order);
       const childCount = Number(b.child_count);
-      const hasLivingChild = b.has_living_child === true;
+      const hasLivingChild = birthOrder === 2;
       if (!empId || !startDate || !birthDate) return fail("Chọn nhân viên, ngày sinh con và ngày bắt đầu nghỉ sinh hợp lệ", 400, origin);
       if (![1, 2, 3].includes(birthOrder)) return fail("Thứ tự sinh không hợp lệ", 400, origin);
       if (!Number.isInteger(childCount) || childCount < 1 || childCount > 10) return fail("Số con trong lần sinh phải từ 1 đến 10", 400, origin);
@@ -303,7 +303,7 @@ Deno.serve(async req => {
       const earliestDay = Math.min(birth.getUTCDate(), new Date(Date.UTC(earliestYear, earliestIndex + 1, 0)).getUTCDate());
       const earliestStart = new Date(Date.UTC(earliestYear, earliestIndex, earliestDay)).toISOString().slice(0, 10);
       if (startDate < earliestStart) return fail("Ngày bắt đầu nghỉ trước ngày sinh không được sớm quá 2 tháng", 400, origin);
-      const durationMonths = (birthOrder === 2 && hasLivingChild && birthDate >= "2026-07-01" ? 7 : 6) + childCount - 1;
+      const durationMonths = (birthOrder === 2 && birthDate >= "2026-07-01" ? 7 : 6) + childCount - 1;
       const start = new Date(startDate + "T00:00:00Z");
       const targetMonth = start.getUTCMonth() + durationMonths;
       const targetYear = start.getUTCFullYear() + Math.floor(targetMonth / 12);
