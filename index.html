@@ -605,13 +605,13 @@ function previewMaternity(){
 function askMaternity(id){
  const e=D.E.concat(S.adds).find(x=>String(x[0])===String(id));if(!e)return;
  const opts=Array.from({length:10},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+' con</option>').join('');
- $('modal').innerHTML='<div class="mo"><div style="max-width:620px;width:min(620px,92vw);max-height:90vh;overflow:auto"><h3>Ghi nhận nghỉ sinh: '+esc(e[1])+' ('+esc(id)+')</h3><p class="note">Điền đủ 3 điều kiện để hệ thống xác định thời gian nghỉ theo chế độ thai sản.</p><div class="f" style="grid-template-columns:1fr">'+
+ $('modal').innerHTML='<div class="mo"><div style="max-width:620px;width:min(620px,92vw);max-height:90vh;overflow:auto"><h3>Ghi nhận nghỉ sinh: '+esc(e[1])+' ('+esc(id)+')</h3><p class="note">Chọn thứ tự sinh và số con trong lần sinh để hệ thống tự tính thời gian nghỉ.</p><div class="f" style="grid-template-columns:1fr">'+
  '<div><label>1. Sinh con thứ mấy?</label><select id="matOrder" onchange="previewMaternity()"><option value="1">Con thứ nhất</option><option value="2">Con thứ hai</option><option value="3">Con thứ ba trở lên</option></select></div>'+
  '<div><label>2. Số con trong lần sinh này?</label><select id="matChildren" onchange="previewMaternity()">'+opts+'</select></div>'+
  
  '<div><label>Ngày sinh con *</label><input id="matBirth" type="date" value="'+TD+'" onchange="previewMaternity()"></div>'+
  '<div><label>Ngày bắt đầu nghỉ sinh *</label><input id="matStart" type="date" value="'+TD+'" onchange="previewMaternity()"></div></div>'+
- '<div id="matPreview" class="msg" style="margin-top:12px"></div><p class="note">Từ 01/07/2026: 6 tháng cơ bản; 7 tháng nếu sinh con thứ hai và tại thời điểm sinh có một con đẻ còn sống; sinh đôi trở lên cộng 1 tháng cho mỗi con tăng thêm. Ngày bắt đầu nghỉ trước sinh không được sớm quá 2 tháng. Ngày quay lại bằng ngày bắt đầu cộng số tháng nghỉ.</p><div id="matError" class="msg e"></div><div class="tb" style="margin-top:12px"><button class="b" onclick="doMaternity('+JSON.stringify(String(id))+')">Xác nhận nghỉ sinh</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
+ '<div id="matPreview" class="msg" style="margin-top:12px"></div><p class="note">Từ 01/07/2026: 6 tháng cơ bản; 7 tháng nếu sinh con thứ hai; sinh đôi trở lên cộng 1 tháng cho mỗi con tăng thêm. Ngày bắt đầu nghỉ trước sinh không được sớm quá 2 tháng. Ngày quay lại bằng ngày bắt đầu cộng số tháng nghỉ.</p><div id="matError" class="msg e"></div><div class="tb" style="margin-top:12px"><button class="b" onclick="doMaternity('+JSON.stringify(String(id))+')">Xác nhận nghỉ sinh</button><button class="b g" onclick="closeM()">Hủy</button></div></div></div>';
  previewMaternity();
 }
 async function doMaternity(id){
