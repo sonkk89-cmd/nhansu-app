@@ -279,17 +279,59 @@ Deno.serve(async req => {
         measuredAt: new Date().toISOString()
       }, 200, origin);
     }
+    if (method === "POST" && route === "/api/maternity") {
+      requireRole(user, ["admin", "editor"]);
+      const b = await req.json().catch(() => ({}));
+      const empId = String(b.emp_id || "").trim();
+      const startDate = dateValue(b.start_date);
+      const birthOrder = Number(b.birth_order);
+      const childCount = Number(b.child_count);
+      const hasLivingChild = b.has_living_child === true;
+      if (!empId || !startDate) return fail("Chọn nhân viên và ngày bắt đầu nghỉ sinh hợp lệ", 400, origin);
+      if (![1, 2, 3].includes(birthOrder)) return fail("Thứ tự sinh không hợp lệ", 400, origin);
+      if (!Number.isInteger(childCount) || childCount < 1 || childCount > 10) return fail("Số con trong lần sinh phải từ 1 đến 10", 400, origin);
+      const { data: employee, error: employeeError } = await admin.from("employees")
+        .select("id,name,gender,status").eq("id", empId).maybeSingle();
+      if (employeeError) throw employeeError;
+      if (!employee || employee.status !== "active") return fail("Nhân viên không còn trong danh sách đang làm việc", 404, origin);
+      if (norm(employee.gender) && norm(employee.gender) !== "nu") return fail("Chỉ ghi nhận nghỉ sinh cho nhân viên nữ", 400, origin);
+      const durationMonths = (birthOrder === 2 && hasLivingChild ? 7 : 6) + childCount - 1;
+      const start = new Date(startDate + "T00:00:00Z");
+      const targetMonth = start.getUTCMonth() + durationMonths;
+      const targetYear = start.getUTCFullYear() + Math.floor(targetMonth / 12);
+      const month = ((targetMonth % 12) + 12) % 12;
+      const lastDay = new Date(Date.UTC(targetYear, month + 1, 0)).getUTCDate();
+      const returnDate = new Date(Date.UTC(targetYear, month, Math.min(start.getUTCDate(), lastDay))).toISOString().slice(0, 10);
+      const { data: existing, error: existingError } = await admin.from("maternity_leaves")
+        .select("id,return_date").eq("emp_id", empId).eq("status", "active").maybeSingle();
+      if (existingError) throw existingError;
+      if (existing && String(existing.return_date) > startDate) return fail("Nhân viên đang có hồ sơ nghỉ sinh chưa kết thúc", 409, origin);
+      if (existing) {
+        const { error } = await admin.from("maternity_leaves").update({ status: "completed" }).eq("id", existing.id);
+        if (error) throw error;
+      }
+      const { data, error } = await admin.from("maternity_leaves").insert({
+        emp_id: empId, emp_name: employee.name || "", start_date: startDate,
+        birth_order: birthOrder, child_count: childCount, has_living_child: hasLivingChild,
+        duration_months: durationMonths, return_date: returnDate, status: "active",
+        created_by: user.username
+      }).select("*").single();
+      if (error) throw error;
+      await audit(user.username, "maternity_leave", `${empId} - ${employee.name}: nghỉ sinh từ ${startDate} đến ${returnDate} (${durationMonths} tháng)`);
+      return reply(data, 201, origin);
+    }
     if (method === "GET" && route === "/api/data") {
-      const [a, r, leaveRows] = await Promise.all([
+      const [a, r, leaveRows, maternityRows] = await Promise.all([
         admin.from("employees").select("*").eq("status", "active").order("id"),
         admin.from("employees").select("*").eq("status", "resigned").order("resign_date", { ascending: false }),
         fetchAllLeaves("*"),
+        admin.from("maternity_leaves").select("*").order("start_date", { ascending: false }),
       ]);
-      if (a.error || r.error) throw a.error || r.error;
+      if (a.error || r.error || maternityRows.error) throw a.error || r.error || maternityRows.error;
       const rowE = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.title,e.manager,e.gender,e.work_shift||null];
       const rowR = (e: any) => [e.id,e.name,e.joined,e.shift,e.type,e.vendor,e.line,e.resign_date,e.resign_reason,1,e.title,e.manager,e.gender,e.work_shift||null];
       const rowL = (e: any) => [e.emp_id,e.name,e.line,e.shift,e.type,e.code,e.reason,e.date];
-      return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: leaveRows.map(rowL) }, 200, origin);
+      return reply({ me: { username: user.username, name: user.name, role: user.role }, E: (a.data||[]).map(rowE), R: (r.data||[]).map(rowR), L: leaveRows.map(rowL), M: maternityRows.data||[] }, 200, origin);
     }
     if (method === "POST" && route === "/api/leaves/cancel") {
       requireRole(user, ["admin", "editor"]); const b = await req.json();
