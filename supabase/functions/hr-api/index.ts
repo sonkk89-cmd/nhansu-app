@@ -280,22 +280,27 @@ Deno.serve(async req => {
       const allRows: any[] = [];
       let totalRows = 0;
       for (let page = 0; page < 100; page++) {
+        const sqlParams = [
+          { ParamName: "Action", ParamValue: "Select" },
+          { ParamName: "AreaCode", ParamValue: "BNI" },
+          { ParamName: "Status", ParamValue: "AL" },
+          { ParamName: "DepartmentID", ParamValue: "0" },
+          { ParamName: "Vendor", ParamValue: "-1" },
+          { ParamName: "Page", ParamValue: String(page) },
+          { ParamName: "PageSize", ParamValue: String(pageSize) },
+          { ParamName: "searchValue", ParamValue: "" }
+        ];
         const payload = {
-          ExecuteUrl: "EXECUTETABLE/STOREDNAME/SQLPARAMS",
-          filterString: "",
-          sql: "",
-          sqlParams: {
-            Action: "Select",
-            AreaCode: "BNI",
-            Status: "AL",
-            DepartmentID: "0",
-            Vendor: "-1",
-            Page: String(page),
-            PageSize: String(pageSize),
-            searchValue: ""
+          model: {
+            ExecuteUrl: "EXECUTETABLE/STOREDNAME/SQLPARAMS",
+            filterString: "",
+            sql: "",
+            storedName: "[dbo].[HR_spEmployees]",
+            strConnection: ""
           },
-          storedName: "[dbo].[HR_spEmployees]",
-          strConnection: ""
+          sqlParams: {
+            Action: { sqlParams }
+          }
         };
         let response: Response;
         try {
