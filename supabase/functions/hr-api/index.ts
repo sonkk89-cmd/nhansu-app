@@ -328,6 +328,22 @@ Deno.serve(async req => {
       await audit(user.username, "maternity_leave", `${empId} - ${employee.name}: nghỉ sinh từ ${startDate} đến ${returnDate} (${durationMonths} tháng)`);
       return reply(data, 201, origin);
     }
+    if (method === "POST" && route === "/api/maternity/restore") {
+      requireRole(user, ["admin", "editor"]);
+      const b = await req.json().catch(() => ({}));
+      const id = Number(b.id);
+      if (!Number.isInteger(id) || id <= 0) return fail("Mã hồ sơ nghỉ sinh không hợp lệ", 400, origin);
+      const { data, error } = await admin.from("maternity_leaves")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+        .in("status", ["active", "completed"])
+        .select("id,emp_id,emp_name")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return fail("Không tìm thấy hồ sơ còn hiệu lực để khôi phục", 404, origin);
+      await audit(user.username, "maternity_restore", `${data.emp_id} - ${data.emp_name}: khôi phục nhân viên, hủy hiệu lực hồ sơ nghỉ sinh ${id}`);
+      return reply({ ok: true, restored: data }, 200, origin);
+    }
     if (method === "GET" && route === "/api/data") {
       const [a, r, leaveRows, maternityRows] = await Promise.all([
         admin.from("employees").select("*").eq("status", "active").order("id"),
