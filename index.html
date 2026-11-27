@@ -615,9 +615,21 @@ function maternitySearchBox(){
 function maternityTableHtml(){
  const rows=(D.M||[]).filter(m=>m.status!=='cancelled').map(m=>{
   const status=m.start_date>TD?'Sắp nghỉ':m.return_date<=TD?'Đã quay lại':'Đang nghỉ sinh';
-  return [esc(m.emp_id),esc(m.emp_name),fd(m.start_date),fd(m.birth_date),Number(m.birth_order)===3?'Con thứ 3 trở lên':'Con thứ '+m.birth_order,m.child_count,m.duration_months+' tháng',fd(m.return_date),status];
+  const action='<button class="b g" onclick="restoreMaternity('+Number(m.id)+')">Khôi phục</button>';
+  return [esc(m.emp_id),esc(m.emp_name),fd(m.start_date),fd(m.birth_date),Number(m.birth_order)===3?'Con thứ 3 trở lên':'Con thứ '+m.birth_order,m.child_count,m.duration_months+' tháng',fd(m.return_date),status,action];
  });
- return '<div class="card"><h3>Danh sách nghỉ sinh</h3><p class="note">Ngày quay lại được tự tính; nhân viên tự trở lại danh sách khi đến hạn.</p>'+tbl(['Mã NV','Họ tên','Ngày bắt đầu','Ngày sinh con','Thứ tự sinh','Số con','Thời gian nghỉ','Ngày quay lại','Tình trạng'],rows)+'</div>';
+ return '<div class="card"><h3>Danh sách nghỉ sinh</h3><p class="note">Ngày quay lại được tự tính. Nút Khôi phục dùng khi ghi nhận nhầm: nhân viên được đưa lại danh sách đang làm việc ngay, hồ sơ cũ vẫn được lưu để đối chiếu.</p>'+tbl(['Mã NV','Họ tên','Ngày bắt đầu','Ngày sinh con','Thứ tự sinh','Số con','Thời gian nghỉ','Ngày quay lại','Tình trạng','Thao tác'],rows)+'</div>';
+}
+async function restoreMaternity(id){
+ const m=(D.M||[]).find(x=>Number(x.id)===Number(id));
+ if(!m)return alert('Không tìm thấy hồ sơ nghỉ sinh cần khôi phục.');
+ if(!confirm('Khôi phục nhân viên '+(m.emp_name||m.emp_id)+'? Hồ sơ nghỉ sinh này sẽ được đánh dấu đã hủy, không xóa khỏi lịch sử.'))return;
+ try{
+  const r=await HRCloud.api('/api/maternity/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||'Không thể khôi phục hồ sơ nghỉ sinh');
+  st.msg='Đã khôi phục nhân viên '+(m.emp_name||m.emp_id)+'.';await load();
+ }catch(e){alert(String(e?.message||e))}
 }
 function previewMaternity(){
  const start=$('matStart')?.value||'',birth=$('matBirth')?.value||'',order=Number($('matOrder')?.value||1),children=Number($('matChildren')?.value||1);
