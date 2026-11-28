@@ -183,7 +183,8 @@ function exportOverviewWorking(){
  XLSX.writeFile(wb,'Nhan_luc_di_lam_'+st.day+'.xlsx');
 }
 function exportOverviewDaily(){
- const rows=leaves().filter(x=>x[7]===st.day&&sf(x[3])&&wfId(x[0])).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
+ const visibleIds=new Set(empsAt(st.day).filter(e=>sf(e[3])&&wf(e)).map(e=>String(e[0])));
+ const rows=leaves().filter(x=>x[7]===st.day&&visibleIds.has(String(x[0]))).sort((x,y)=>String(x[1]).localeCompare(String(y[1]),'vi'));
  const data=[['Mã NV','Họ tên','Line','Ca','Loại nhân lực','Loại nghỉ','Lý do','Ngày'],...rows.map(x=>[x[0],x[1],x[2],x[3],x[4],CODE[x[5]]||x[5],x[6],fd(x[7])])];
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Nghi hang ngay');
@@ -198,7 +199,8 @@ function exportOverviewResigned(){
 }
 function setOverviewDetail(k){st.ovDetail=st.ovDetail===k?'':k;st.ovDetailQ='';render()}
 function ovAtt(a){
- const allL=leaves().filter(x=>x[7]===st.day&&sf(x[3]));
+ const visibleIds=new Set(a.map(e=>String(e[0])));
+ const allL=leaves().filter(x=>x[7]===st.day&&visibleIds.has(String(x[0])));
  const leaveIds=new Set(allL.map(x=>String(x[0])));
  const n=a.filter(e=>leaveIds.has(String(e[0]))).length,w=a.length-n;
  const gone=resigned().filter(e=>e[7]===st.day&&sf(e[3])&&wf(e));
